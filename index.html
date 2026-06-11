@@ -473,8 +473,8 @@ const SHEET_ID  = '1gHDnzyWXWatjiI3V0DwC12oquYOQrKq0YNDCWPGFDRw';
 // Published ID (đã có, dùng cho CÁCH 3)
 const PUB_ID = '2PACX-1vQZcJ2E0dfSw6gHcltM1eEw_jqL8DAzHqDS5J_eATVfRowwosjHQhW3awLHE10pDWoIsGmu52bnGyl5';
 
-// Tên các sheet tab trong Google Sheets (phải khớp chính xác với tên tab)
-const SHEET_GIDS = { bocMu: 'PhieuBocMu', luong: 'LuongNV', hieuSuat: 'HieuSuat' };
+// Tên các sheet tab trong Google Sheets (khớp chính xác với tên tab)
+const SHEET_GIDS = { bocMu: 'PhieuBocMu', luong: 'Lương nhân viên', hieuSuat: 'Hiệu suất' };
 
 // Tự động chọn mode
 const USE_PROXY = (PROXY_URL !== 'YOUR_WEBAPP_URL_HERE') &&
@@ -488,34 +488,27 @@ let filterFrom = '', filterTo = '', filterToSel = '', filterXe = '';
 // ────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────
-//  FETCH — qua Proxy hoặc GViz
+//  FETCH — qua Proxy (raw 2D array) hoặc GViz
 // ────────────────────────────────────────────────
+async function fetchSheetRaw(sheetName) {
+  const url = `${PROXY_URL}?sheet=${encodeURIComponent(sheetName)}`;
+  const resp = await fetch(url, { method:'GET', redirect:'follow', headers:{'Accept':'application/json'} });
+  if (!resp.ok) throw new Error(`Proxy ${resp.status}: ${sheetName}`);
+  const rows = await resp.json();
+  if (!Array.isArray(rows)) throw new Error(rows?.error || 'Invalid response');
+  return rows; // raw 2D array, rows[0] = header row
+}
+
 async function fetchSheetByName(sheetName) {
-  if (USE_PROXY) {
-    const url = `${PROXY_URL}?sheet=${encodeURIComponent(sheetName)}`;
-    const resp = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: { 'Accept': 'application/json' },
+  const rows = await fetchSheetRaw(sheetName);
+  const headers = rows[0].map(h => String(h));
+  return rows.slice(1)
+    .filter(r => r.some(v => v !== '' && v !== null && v !== undefined))
+    .map(r => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = r[i] ?? ''; });
+      return obj;
     });
-    if (!resp.ok) throw new Error(`Proxy ${resp.status}: ${sheetName}`);
-    const rows = await resp.json();
-    if (!Array.isArray(rows)) throw new Error(rows?.error || 'Invalid response');
-    const headers = rows[0].map(h => String(h));
-    return rows.slice(1)
-      .filter(r => r.some(v => v !== '' && v !== null && v !== undefined))
-      .map(r => {
-        const obj = {};
-        headers.forEach((h, i) => { obj[h] = r[i] ?? ''; });
-        return obj;
-      });
-  } else {
-    // GViz — cần share "Anyone with link can view"
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`GViz ${resp.status}: ${sheetName}`);
-    return parseCsv(await resp.text());
-  }
 }
 
 async function fetchSheet(sheetName) {
@@ -537,12 +530,45 @@ function parseCsvRow(line) {
   const result = []; let cur = ''; let inQ = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') { inQ = !inQ; } 
+    if (ch === '"') { inQ = !inQ; }
     else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
     else { cur += ch; }
   }
   result.push(cur);
   return result;
+}
+
+// Chuẩn hoá ngày từ Google Sheets (ISO, serial Excel, DD/MM/YYYY → YYYY-MM-DD)
+function parseSheetDate(raw) {
+  if (!raw && raw !== 0) return '';
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                    // đã đúng format
+  if (s.includes('T')) return s.slice(0, 10);                       // ISO datetime
+  if (s.includes('/')) {                                            // DD/MM/YYYY
+    const p = s.split('/');
+    if (p.length === 3) return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  }
+  const n = parseFloat(s);
+  if (!isNaN(n) && n > 40000) {                                     // Excel serial
+    const d = new Date(Math.round((n - 25569) * 86400000));
+    return d.toISOString().slice(0, 10);
+  }
+  return s;
+}
+
+// Chuẩn hoá số tiền VN (dấu . = phân ngàn, , = thập phân)
+function parseVN(s) {
+  if (s === null || s === undefined || s === '') return 0;
+  return parseFloat(String(s).replace(/\./g,'').replace(',','.')) || 0;
+}
+
+// Chuẩn hoá % — Google Sheets trả về 0.617 (raw decimal) hoặc 61.7 (đã %)
+function parseVNPct(s) {
+  if (s === null || s === undefined || s === '') return 0;
+  const str = String(s).replace('%','').replace(',','.').trim();
+  const val = parseFloat(str) || 0;
+  // Nếu là raw decimal (< 2), nhân 100 để ra phần trăm
+  return Math.abs(val) < 2 ? Math.round(val * 10000) / 100 : Math.round(val * 100) / 100;
 }
 
 // ────────────────────────────────────────────────
@@ -588,82 +614,67 @@ window.onload = async () => {
   }
 };
 
-async function fetchSheetTry(...names) {
-  for (const name of names) {
-    try { const r = await fetchSheet(name); if (r && r.length) return r; } catch(e) {}
-  }
-  return [];
-}
-
 async function loadFromSheets() {
-  // Fetch PhieuBocMu + Luong NV in parallel — thử nhiều tên tab khác nhau
-  const [bocMuRows, luongRows, hsRows] = await Promise.all([
-    fetchSheetTry('PhieuBocMu','PHIEU BOC MU','BocMu','Sheet1'),
-    fetchSheetTry('LuongNV','LUONG NV','BangLuong','Sheet2'),
-    fetchSheetTry('HieuSuat','HIEU SUAT','Sheet3'),
+  // Fetch raw 2D arrays — dùng positional index để tránh lỗi encoding tên cột Unicode
+  const [bmRaw, luongRaw, hsRaw] = await Promise.all([
+    fetchSheetRaw('PhieuBocMu'),
+    fetchSheetRaw('Lương nhân viên'),
+    fetchSheetRaw('Hiệu suất'),
   ]);
 
-  // Parse BocMu — date format DD/MM/YYYY
-  const bm = bocMuRows.filter(r => (r['ID']||'').startsWith('BM-')).map(r => {
-    const raw = r['NGAY BOC']||'';
-    let ngay = raw;
-    if (raw.includes('/')) {
-      const p = raw.split('/'); // DD/MM/YYYY
-      ngay = p[2]+'-'+p[1]+'-'+p[0];
-    }
-    return {
-      id: r['ID'], ngay, to: r['TO']||'', vuon: r['VUON BOC']||'',
-      xe: r['MA XE']||'N/A', msnv: r['MSNV']||'', tenCN: r['HO TEN CONG NHAN']||'',
-      muon: (r['ID']||'').match(/-(M\d+)$/)?.[1]||'M1',
-      muDong: parseVN(r['MU DONG TUOI']), muDay: parseVN(r['MU DAY TUOI']),
-      tongTuoi: parseVN(r['TONG SAN LUONG TUOI']),
-    };
-  });
+  // PhieuBocMu: row 0 = header, data từ row 1
+  // A=0:ID  B=1:NGAY BOC  C=2:TO  D=3:VUON BOC  E=4:MA XE  F=5:MSNV
+  // G=6:HO TEN  O=14:MU DONG  P=15:MU DAY  Q=16:TONG TUOI
+  const bm = bmRaw.slice(1)
+    .filter(r => String(r[0]||'').startsWith('BM-'))
+    .map(r => {
+      const id = String(r[0]||'');
+      const msnv = String(r[5]||'').replace(/\.0$/,'');
+      return {
+        id, ngay: parseSheetDate(r[1]), to: String(r[2]||''),
+        vuon: String(r[3]||''), xe: String(r[4]||'N/A') || 'N/A',
+        msnv, tenCN: String(r[6]||''),
+        muon: id.match(/-(M\d+)$/)?.[1] || 'M1',
+        muDong:   parseVN(r[14]), muDay: parseVN(r[15]),
+        tongTuoi: parseVN(r[16]),
+      };
+    });
 
-  // Parse Luong NV — multi-row header, data starts at row where col0 is numeric
-  const luong = luongRows.filter(r => {
-    const id = r['Mã NV']||r[Object.keys(r)[0]]||'';
-    return /^\d{3}$/.test(String(id).trim());
-  }).map(r => {
-    const keys = Object.keys(r);
-    return {
-      msnv: String(r[keys[0]]||'').trim(),
-      ten:  String(r[keys[1]]||'').trim(),
-      to:   String(r[keys[3]]||'').trim(),
-      soCong:   parseVN(r[keys[4]]),
-      ngayCN:   parseVN(r[keys[5]]),
-      tienCC:   parseVN(r[keys[6]]),
-      tongMu:   parseVN(r[keys[7]]),
-      tienSL:   parseVN(r[keys[8]]),
-      xepHang:  String(r[keys[9]]||'B').trim(),
-      tienKT:   parseVN(r[keys[10]]),
-      hieuSuat: parseVNPct(r[keys[11]]),
-      tongLuong:parseVN(r[keys[12]]),
-    };
-  });
+  // Lương nhân viên: row 0 = group header, row 1 = sub-header, data từ row 2
+  // A=0:Mã NV  B=1:Họ tên  D=3:Tổ  E=4:Số công  G=6:Tiền CC
+  // H=7:Tổng mủ  I=8:Tiền SL  J=9:Xếp hạng  K=10:Tiền KT  L=11:Hiệu suất  M=12:Tổng lương
+  const luong = luongRaw.slice(2)
+    .filter(r => /^\d{3}$/.test(String(r[0]||'').replace(/\.0$/,'').trim()))
+    .map(r => {
+      const msnv     = String(r[0]).replace(/\.0$/,'').trim();
+      const soCong   = parseVN(r[4]);
+      const tienCC   = parseVN(r[6]) || Math.round(soCong * 20000);
+      const tongMu   = parseVN(r[7]);
+      const tienSL   = parseVN(r[8]) || Math.round(tongMu * 300);
+      const xepHang  = String(r[9]||'B').trim();
+      const tienKT   = parseVN(r[10]);
+      const hieuSuat = parseVNPct(r[11]);
+      const tongLuong= parseVN(r[12]);
+      return { msnv, ten: String(r[1]||'').trim(), to: String(r[3]||'').trim(),
+               soCong, ngayCN: parseVN(r[5]), tienCC, tongMu, tienSL,
+               xepHang, tienKT, hieuSuat, tongLuong };
+    });
 
-  // Parse Hiệu suất for KH vs actual
+  // Hiệu suất: row 0 = header, row 1 = trống, data từ row 2
+  // A=0:Mã NV  E=4:KH mủ  F=5:Thực tế  G=6:Hiệu suất
   const hs = {};
-  hsRows.filter(r => /^\d{3}$/.test(String(r[Object.keys(r)[0]]||'').trim())).forEach(r => {
-    const keys = Object.keys(r);
-    const msnv = String(r[keys[0]]).trim();
-    hs[msnv] = { khMu: parseVN(r[keys[4]]), thucTe: parseVN(r[keys[5]]), hieuSuat: parseVNPct(r[keys[6]]) };
-  });
+  hsRaw.slice(1)
+    .filter(r => /^\d{3}$/.test(String(r[0]||'').replace(/\.0$/,'').trim()))
+    .forEach(r => {
+      const msnv = String(r[0]).replace(/\.0$/,'').trim();
+      hs[msnv] = { khMu: parseVN(r[4]), thucTe: parseVN(r[5]), hieuSuat: parseVNPct(r[6]) };
+    });
 
   DATA = { bm, luong, hs };
   const lbl = document.getElementById('data-source-lbl');
   if (lbl) lbl.innerHTML = '🟢 Google Sheets · Realtime';
 }
 
-function parseVNPct(s) {
-  if (!s) return 0;
-  return parseFloat(String(s).replace('%','').replace('.','').replace(',','.')) || 0;
-}
-
-function parseVN(s) {
-  if (!s) return 0;
-  return parseFloat(String(s).replace(/\./g,'').replace(',','.')) || 0;
-}
 
 function processData(bm, ctRows, cnRows) {
   // Aggregate luong per worker from BocMu

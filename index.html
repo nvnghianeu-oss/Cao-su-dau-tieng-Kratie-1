@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Ban Lãnh Đạo – Cao Su Siêm Riệp</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── TOKENS ── */
+:root {
+  --green-dark: #0f4c2a;
+  --green:      #1a6b3a;
+  --green-mid:  #2d8a52;
+  --green-light:#edf7f1;
+  --green-pale: #f5faf7;
+  --amber:      #e8a020;
+  --amber-light:#fff8e6;
+  --red:        #c0392b;
+  --red-light:  #fdf0f0;
+  --blue:       #1565c0;
+  --blue-light: #e8f0fd;
+  --text:       #1a1a1a;
+  --text-2:     #555;
+  --text-3:     #888;
+  --border:     #e0e0e0;
+  --bg:         #f2f5f3;
+  --card:       #ffffff;
+  --sidebar-w:  220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:var(--green-dark);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;height:100vh;z-index:100}
+.sidebar-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo .co{font-size:13px;font-weight:700;line-height:1.35;letter-spacing:.2px}
+.sidebar-logo .badge{margin-top:6px;display:inline-block;background:var(--amber);color:#1a1a1a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.3px}
+.sidebar-nav{flex:1;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.7);transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:var(--amber)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);font-size:10px;color:rgba(255,255,255,.4)}
+.data-src{display:flex;align-items:center;gap:6px;margin-top:6px}
+.dot-live{width:7px;height:7px;background:#4caf50;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar-w);flex:1;padding:24px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+
+/* ── TOP BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:20px;font-weight:700;color:var(--green-dark)}
+.page-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.filters{display:flex;gap:10px;flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:3px}
+.filter-group label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+select,input[type=date]{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:#fff;cursor:pointer;outline:none}
+select:focus,input:focus{border-color:var(--green)}
+.btn-apply{padding:7px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-end;transition:background .15s}
+.btn-apply:hover{background:var(--green-dark)}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--card);border-radius:10px;padding:16px 18px;border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green)}
+.kpi-card.amber::before{background:var(--amber)}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-lbl{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kpi-val{font-size:22px;font-weight:800;color:var(--green-dark);margin:6px 0 2px;line-height:1}
+.kpi-card.amber .kpi-val{color:var(--amber)}
+.kpi-card.blue .kpi-val{color:var(--blue)}
+.kpi-card.red .kpi-val{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--text-3)}
+
+/* ── CHART GRID ── */
+.chart-grid{display:grid;gap:16px;margin-bottom:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:2fr 1fr 1fr}
+.g12{grid-template-columns:7fr 5fr}
+.g21{grid-template-columns:5fr 7fr}
+.chart-card{background:var(--card);border-radius:10px;padding:18px;border:1px solid var(--border)}
+.chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:700;color:var(--green-dark)}
+.chart-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.chart-tag{font-size:10px;background:var(--green-light);color:var(--green);padding:3px 8px;border-radius:10px;font-weight:600}
+.chart-wrap{position:relative;height:220px}
+.chart-wrap.tall{height:280px}
+.chart-wrap.short{height:160px}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.data-table th{background:var(--green-pale);padding:8px 12px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--green);font-weight:700;border-bottom:2px solid var(--green-light)}
+.data-table td{padding:8px 12px;border-bottom:1px solid #f5f5f5;color:var(--text-2)}
+.data-table tr:hover td{background:var(--green-pale)}
+.data-table .num{text-align:right;font-weight:600;color:var(--text)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:11px}
+.bAp{background:#fffbe6;color:#7a5c00}.bA{background:#e8f5e9;color:#2e7d32}
+.bB{background:var(--blue-light);color:var(--blue)}.bC{background:#fff3e0;color:#e65100}
+.bD{background:var(--red-light);color:var(--red)}
+
+/* ── HEATMAP ── */
+.heatmap-wrap{overflow-x:auto}
+.heatmap{border-collapse:collapse;font-size:11px;width:100%}
+.heatmap th{padding:5px 8px;text-align:center;font-size:10px;color:var(--text-3);white-space:nowrap}
+.heatmap td{padding:6px 8px;text-align:center;border:1px solid #fff;border-radius:3px;font-weight:600;font-size:11px;min-width:60px}
+
+/* ── MINI STATS ── */
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mini-stat{background:var(--green-pale);border-radius:8px;padding:12px 14px;border:1px solid var(--green-light)}
+.mini-stat .ms-lbl{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px}
+.mini-stat .ms-val{font-size:16px;font-weight:800;color:var(--green-dark);margin-top:3px}
+
+/* ── SCROLLABLE TABLE ── */
+.table-wrap{overflow-y:auto;max-height:320px}
+.table-wrap::-webkit-scrollbar{width:4px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sticky-hdr thead th{position:sticky;top:0;background:#f5faf7;z-index:10;box-shadow:0 1px 0 #c8e6d8}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;background:var(--green-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;color:#fff}
+#loading h2{font-size:18px;margin-top:16px;font-weight:600}
+#loading p{font-size:13px;opacity:.6;margin-top:6px}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.g12,.g21{grid-template-columns:1fr}
+  .sidebar{width:60px}.main{margin-left:60px}
+  .sidebar-logo .co,.nav-item span,.sidebar-footer{display:none}
+  .nav-item{justify-content:center;padding:12px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <h2>Đang tải dữ liệu...</h2>
+  <p>Đang tải dữ liệu nhúng sẵn...</p>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="co">CTY TNHH<br>CAO SU SIÊM RIỆP</div>
+    <div class="badge">TỔ 5 · THÁNG 06/2026</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="showPage('p1',this)">
+      <span class="icon">📊</span><span>Tổng quan</span>
+    </div>
+    <div class="nav-item" onclick="showPage('p2',this)">
+      <span class="icon">🌿</span><span>Sản lượng</span>
+    </div>
+    <div class="nav-item" onclick="showPage('p3',this)">
+      <span class="icon">💰</span><span>Tiền lương</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div>Nguồn dữ liệu</div>
+    <div class="data-src"><div class="dot-live" id="dot-live"></div><span id="data-source-lbl">Google Sheets · Live</span></div>
+    <button onclick="refreshLive()" id="btn-refresh"
+      style="margin-top:10px;width:100%;padding:7px;background:rgba(255,255,255,.12);
+             color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;
+             cursor:pointer;font-size:12px;font-weight:600;transition:all .15s"
+      onmouseover="this.style.background='rgba(255,255,255,.22)'"
+      onmouseout="this.style.background='rgba(255,255,255,.12)'">
+      🔄 Làm mới dữ liệu
+    </button>
+    <div id="refresh-status" style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px;text-align:center"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ════════ TRANG 1: TỔNG QUAN ════════ -->
+  <div id="p1" class="page active">
+    <div class="topbar">
+      <div>
+        <div class="page-title">📊 Tổng quan</div>
+        <div class="page-sub" id="p1-period">Đang tải...</div>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Từ ngày</label>
+          <input type="date" id="f-from">
+        </div>
+        <div class="filter-group">
+          <label>Đến ngày</label>
+          <input type="date" id="f-to">
+        </div>
+        <div class="filter-group">
+          <label>Tổ</label>
+          <select id="f-to-sel"><option value="">Tất cả</option></select>
+        </div>
+        <button class="btn-apply" onclick="applyFilter()">Áp dụng</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-lbl">Công nhân</div>
+        <div class="kpi-val" id="k-cn">—</div>
+        <div class="kpi-sub">người khai thác mủ</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-lbl">Tổng mủ tươi</div>
+        <div class="kpi-val" id="k-mu">—</div>
+        <div class="kpi-sub" id="k-mu-sub">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">Mủ đông</div>
+        <div class="kpi-val" id="k-dong">—</div>
+        <div class="kpi-sub" id="k-dong-pct">— % tổng</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-lbl">Mủ dây</div>
+        <div class="kpi-val" id="k-day">—</div>
+        <div class="kpi-sub" id="k-day-pct">— % tổng</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-lbl">Quỹ lương</div>
+        <div class="kpi-val" id="k-luong">—</div>
+        <div class="kpi-sub" id="k-luong-sub">Riel</div>
+      </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="chart-grid g12" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Sản lượng mủ tươi theo ngày</div>
+            <div class="chart-sub">Mủ đông + mủ dây · kg/ngày</div>
+          </div>
+          <span class="chart-tag">Xu hướng</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="c-trend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Sản lượng theo Tổ</div>
+            <div class="chart-sub">Tổng mủ tươi · kg</div>
+          </div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="c-to"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="chart-grid g3">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Mủ đông vs Mủ dây theo Tổ</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c-dongday"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Sản lượng theo Xe</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c-xe"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Sản lượng theo Vườn mủ (A/B/C/D)</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c-muon"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ TRANG 2: SẢN LƯỢNG ════════ -->
+  <div id="p2" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">🌿 Phân tích Sản lượng</div>
+        <div class="page-sub">Chi tiết theo tổ · xe · ngày · đợt bóc</div>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Tổ</label>
+          <select id="f2-to"><option value="">Tất cả</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Xe</label>
+          <select id="f2-xe"><option value="">Tất cả</option></select>
+        </div>
+        <button class="btn-apply" onclick="renderPage2()">Áp dụng</button>
+      </div>
+    </div>
+
+    <!-- Heatmap + mini stats -->
+    <div class="chart-grid g21" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Heatmap sản lượng: Ngày × Tổ</div>
+            <div class="chart-sub">Mủ tươi (kg) — đậm = nhiều</div>
+          </div>
+          <span class="chart-tag">Nhiệt đồ</span>
+        </div>
+        <div class="heatmap-wrap">
+          <table class="heatmap" id="heatmap-table"></table>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Chỉ số sản lượng</div>
+        </div>
+        <div class="mini-stats" id="mini-stats-sl" style="margin-bottom:14px"></div>
+        <div class="chart-header" style="margin-top:4px">
+          <div class="chart-title">Sản lượng theo Vườn mủ (A/B/C/D)</div>
+        </div>
+        <div class="chart-wrap short"><canvas id="c2-muon"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="chart-grid g2" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Xu hướng mủ đông + mủ dây theo ngày</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c2-trend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Chi tiết sản lượng theo Xe</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c2-xe"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Table: từng phiếu -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Chi tiết phiếu bóc mủ</div>
+        <div class="chart-sub">Tất cả phiếu trong kỳ — click header để sắp xếp</div>
+      </div>
+      <div class="table-wrap" style="max-height:340px">
+        <table class="data-table sticky-hdr" id="table-phieu">
+          <thead><tr>
+            <th>Ngày</th><th>Tổ</th><th>Xe</th><th>MSNV</th><th>Họ tên</th>
+            <th>Đợt</th><th class="num">Mủ đông (kg)</th><th class="num">Mủ dây (kg)</th><th class="num">Tổng tươi (kg)</th>
+          </tr></thead>
+          <tbody id="tbody-phieu"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ TRANG 3: TIỀN LƯƠNG ════════ -->
+  <div id="p3" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">💰 Tiền lương & Hiệu suất</div>
+        <div class="page-sub">Lương chi tiết từng công nhân · Tháng 06/2026</div>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label>Tổ</label>
+          <select id="f3-to"><option value="">Tất cả</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Xếp hạng KT</label>
+          <select id="f3-xh">
+            <option value="">Tất cả</option>
+            <option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+        </div>
+        <button class="btn-apply" onclick="renderPage3()">Áp dụng</button>
+      </div>
+    </div>
+
+    <!-- KPI lương -->
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="kpi-card amber">
+        <div class="kpi-lbl">Tổng quỹ lương</div>
+        <div class="kpi-val" id="k3-tong">—</div>
+        <div class="kpi-sub">Riel (tháng 06/2026)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">Lương TB / người</div>
+        <div class="kpi-val" id="k3-tb">—</div>
+        <div class="kpi-sub">Riel</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-lbl">Hiệu suất TB</div>
+        <div class="kpi-val" id="k3-hs">—</div>
+        <div class="kpi-sub">so với kế hoạch</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">Đạt A / A+</div>
+        <div class="kpi-val" id="k3-aplus">—</div>
+        <div class="kpi-sub">công nhân xếp hạng cao</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid g2" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Hiệu suất theo Tổ</div>
+          <div class="chart-sub">Trung bình % vs kế hoạch</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c3-hs-to"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Phân bố xếp hạng kỹ thuật</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c3-xh"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid g12" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Top 10 công nhân sản lượng cao nhất</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c3-top10"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Cơ cấu lương theo Tổ</div>
+        </div>
+        <div class="chart-wrap"><canvas id="c3-luong-to"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Table CN -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Bảng lương chi tiết từng công nhân</div>
+      </div>
+      <div class="table-wrap" style="max-height:360px">
+        <table class="data-table sticky-hdr" id="table-luong">
+          <thead><tr>
+            <th>Mã NV</th><th>Họ tên</th><th>Tổ</th>
+            <th class="num">Số công</th><th class="num">Mủ tươi (kg)</th>
+            <th class="num">Tiền CC</th><th class="num">Tiền SL</th>
+            <th>Xếp hạng</th><th class="num">Tiền KT</th>
+            <th class="num">Hiệu suất</th><th class="num">Tổng lương</th>
+          </tr></thead>
+          <tbody id="tbody-luong"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ────────────────────────────────────────────────
+//  CONFIG — kết nối Google Sheets
+// ────────────────────────────────────────────────
+// CÁCH 1 (khuyên dùng): Apps Script Web App Proxy
+//   → Xem file DataProxy.gs, deploy rồi dán URL vào đây
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxFx5gUjoRuSptb6ZgJzSpOwDp4dKQ_cmZxnyDYfj39xnWqDlbh8IzWC6QhDfmcYRxOWQ/exec';
+
+// CÁCH 2 (dự phòng): Share sheet "Anyone with link can view"
+//   → Dán Sheet ID (từ URL) vào đây
+const SHEET_ID  = '1gHDnzyWXWatjiI3V0DwC12oquYOQrKq0YNDCWPGFDRw';
+
+// Published ID (đã có, dùng cho CÁCH 3)
+const PUB_ID = '2PACX-1vQZcJ2E0dfSw6gHcltM1eEw_jqL8DAzHqDS5J_eATVfRowwosjHQhW3awLHE10pDWoIsGmu52bnGyl5';
+
+// Tự động chọn mode
+const USE_PROXY = (PROXY_URL !== 'YOUR_WEBAPP_URL_HERE') && 
+                    (window.location.protocol !== 'file:');  // file:// blocks fetch
+const USE_EMBED = !USE_PROXY; // offline fallback với data nhúng sẵn
+// ────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────
+//  FETCH — qua Proxy hoặc GViz
+// ────────────────────────────────────────────────
+async function fetchSheetByName(sheetName) {
+  if (USE_PROXY) {
+    const url = `${PROXY_URL}?sheet=${encodeURIComponent(sheetName)}`;
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!resp.ok) throw new Error(`Proxy ${resp.status}: ${sheetName}`);
+    const rows = await resp.json();
+    if (!Array.isArray(rows)) throw new Error(rows?.error || 'Invalid response');
+    const headers = rows[0].map(h => String(h));
+    return rows.slice(1)
+      .filter(r => r.some(v => v !== '' && v !== null && v !== undefined))
+      .map(r => {
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = r[i] ?? ''; });
+        return obj;
+      });
+  } else {
+    // GViz — cần share "Anyone with link can view"
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`GViz ${resp.status}: ${sheetName}`);
+    return parseCsv(await resp.text());
+  }
+}
+
+async function fetchSheet(sheetName) {
+  return fetchSheetByName(sheetName);
+}
+
+function parseCsv(text) {
+  const lines = text.trim().split('\n');
+  const headers = parseCsvRow(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCsvRow(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim().replace(/^"|"$/g,'')] = (vals[i]||'').replace(/^"|"$/g,'').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+}
+
+function parseCsvRow(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; } 
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ────────────────────────────────────────────────
+//  EMBED DATA (fallback khi chưa có SHEET_ID)
+// ────────────────────────────────────────────────
+const EMBED_DATA = {"bm": [{"id": "BM-20260607-238-M1", "ngay": "2026-06-07", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "238", "tenCN": "HEANG SEANGLY", "muon": "M1", "muDong": 0.0, "muDay": 0.0, "tongTuoi": 0.0}, {"id": "BM-20260607-238-M2", "ngay": "2026-06-07", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "238", "tenCN": "HEANG SEANGLY", "muon": "M2", "muDong": 100.0, "muDay": 120.0, "tongTuoi": 220.0}, {"id": "BM-20260608-242-M1", "ngay": "2026-06-08", "to": "1", "vuon": "A", "xe": "N/A", "msnv": "242", "tenCN": "YORN NET", "muon": "M1", "muDong": 400.0, "muDay": 70.0, "tongTuoi": 470.0}, {"id": "BM-20260608-240-M1", "ngay": "2026-06-08", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 0.0, "muDay": 0.0, "tongTuoi": 0.0}, {"id": "BM-20260609-240-M1", "ngay": "2026-06-09", "to": "1", "vuon": "A", "xe": "N/A", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 270.0, "muDay": 100.0, "tongTuoi": 370.0}, {"id": "BM-20260609-236-M1", "ngay": "2026-06-09", "to": "1", "vuon": "B", "xe": "XE-01", "msnv": "236", "tenCN": "SRENG SEANGHIM", "muon": "M1", "muDong": 100.0, "muDay": 50.0, "tongTuoi": 150.0}, {"id": "BM-20260610-236-M1", "ngay": "2026-06-10", "to": "1", "vuon": "D", "xe": "XE-02", "msnv": "236", "tenCN": "SRENG SEANGHIM", "muon": "M1", "muDong": 171.0, "muDay": 89.0, "tongTuoi": 260.0}, {"id": "BM-20260610-233-M1", "ngay": "2026-06-10", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "233", "tenCN": "SO SREYPAN", "muon": "M1", "muDong": 235.0, "muDay": 368.0, "tongTuoi": 603.0}, {"id": "BM-20260610-256-M1", "ngay": "2026-06-10", "to": "5", "vuon": "D", "xe": "XE-01", "msnv": "256", "tenCN": "LEANG SOUT", "muon": "M1", "muDong": 434.0, "muDay": 125.0, "tongTuoi": 559.0}, {"id": "BM-20260610-241-M1", "ngay": "2026-06-10", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 318.0, "muDay": 400.0, "tongTuoi": 718.0}, {"id": "BM-20260610-240-M1", "ngay": "2026-06-10", "to": "2", "vuon": "D", "xe": "XE-02", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 345.0, "muDay": 348.0, "tongTuoi": 693.0}, {"id": "BM-20260610-257-M1", "ngay": "2026-06-10", "to": "5", "vuon": "A", "xe": "XE-01", "msnv": "257", "tenCN": "SONG THNGAY", "muon": "M1", "muDong": 276.0, "muDay": 475.0, "tongTuoi": 751.0}, {"id": "BM-20260610-237-M1", "ngay": "2026-06-10", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "237", "tenCN": "KHEAM PHOEUN", "muon": "M1", "muDong": 512.0, "muDay": 471.0, "tongTuoi": 983.0}, {"id": "BM-20260610-262-M1", "ngay": "2026-06-10", "to": "5", "vuon": "A", "xe": "XE-02", "msnv": "262", "tenCN": "BUN SOUNSREYAT", "muon": "M1", "muDong": 290.0, "muDay": 314.0, "tongTuoi": 604.0}, {"id": "BM-20260610-250-M1", "ngay": "2026-06-10", "to": "4", "vuon": "B", "xe": "XE-02", "msnv": "250", "tenCN": "CHHOUEN HAN", "muon": "M1", "muDong": 226.0, "muDay": 245.0, "tongTuoi": 471.0}, {"id": "BM-20260610-235-M1", "ngay": "2026-06-10", "to": "1", "vuon": "C", "xe": "XE-01", "msnv": "235", "tenCN": "KOEMHENG KHENG", "muon": "M1", "muDong": 221.0, "muDay": 132.0, "tongTuoi": 353.0}, {"id": "BM-20260610-251-M1", "ngay": "2026-06-10", "to": "4", "vuon": "C", "xe": "XE-02", "msnv": "251", "tenCN": "LOEUNG SAVOEUN", "muon": "M1", "muDong": 168.0, "muDay": 197.0, "tongTuoi": 365.0}, {"id": "BM-20260611-245-M1", "ngay": "2026-06-11", "to": "3", "vuon": "A", "xe": "XE-02", "msnv": "245", "tenCN": "VE SAVIT", "muon": "M1", "muDong": 649.0, "muDay": 492.0, "tongTuoi": 1141.0}, {"id": "BM-20260611-253-M1", "ngay": "2026-06-11", "to": "4", "vuon": "A", "xe": "XE-01", "msnv": "253", "tenCN": "CHHOM SREYNA", "muon": "M1", "muDong": 276.0, "muDay": 182.0, "tongTuoi": 458.0}, {"id": "BM-20260611-247-M1", "ngay": "2026-06-11", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "247", "tenCN": "CHEA POV", "muon": "M1", "muDong": 448.0, "muDay": 298.0, "tongTuoi": 746.0}, {"id": "BM-20260611-237-M1", "ngay": "2026-06-11", "to": "2", "vuon": "A", "xe": "XE-02", "msnv": "237", "tenCN": "KHEAM PHOEUN", "muon": "M1", "muDong": 257.0, "muDay": 251.0, "tongTuoi": 508.0}, {"id": "BM-20260611-241-M1", "ngay": "2026-06-11", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 954.0, "muDay": 467.0, "tongTuoi": 1421.0}, {"id": "BM-20260611-258-M1", "ngay": "2026-06-11", "to": "5", "vuon": "B", "xe": "XE-01", "msnv": "258", "tenCN": "DOEM DOEURN", "muon": "M1", "muDong": 336.0, "muDay": 229.0, "tongTuoi": 565.0}, {"id": "BM-20260611-240-M1", "ngay": "2026-06-11", "to": "2", "vuon": "D", "xe": "XE-01", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 286.0, "muDay": 149.0, "tongTuoi": 435.0}, {"id": "BM-20260611-250-M1", "ngay": "2026-06-11", "to": "4", "vuon": "B", "xe": "XE-01", "msnv": "250", "tenCN": "CHHOUEN HAN", "muon": "M1", "muDong": 103.0, "muDay": 217.0, "tongTuoi": 320.0}, {"id": "BM-20260611-254-M1", "ngay": "2026-06-11", "to": "4", "vuon": "B", "xe": "XE-02", "msnv": "254", "tenCN": "TAM SREYINY", "muon": "M1", "muDong": 796.0, "muDay": 455.0, "tongTuoi": 1251.0}, {"id": "BM-20260611-257-M1", "ngay": "2026-06-11", "to": "5", "vuon": "A", "xe": "XE-02", "msnv": "257", "tenCN": "SONG THNGAY", "muon": "M1", "muDong": 624.0, "muDay": 387.0, "tongTuoi": 1011.0}, {"id": "BM-20260612-235-M1", "ngay": "2026-06-12", "to": "1", "vuon": "C", "xe": "XE-01", "msnv": "235", "tenCN": "KOEMHENG KHENG", "muon": "M1", "muDong": 406.0, "muDay": 95.0, "tongTuoi": 501.0}, {"id": "BM-20260612-243-M1", "ngay": "2026-06-12", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "243", "tenCN": "HIM SAROM", "muon": "M1", "muDong": 169.0, "muDay": 168.0, "tongTuoi": 337.0}, {"id": "BM-20260612-233-M1", "ngay": "2026-06-12", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "233", "tenCN": "SO SREYPAN", "muon": "M1", "muDong": 452.0, "muDay": 308.0, "tongTuoi": 760.0}, {"id": "BM-20260612-251-M1", "ngay": "2026-06-12", "to": "4", "vuon": "C", "xe": "XE-01", "msnv": "251", "tenCN": "LOEUNG SAVOEUN", "muon": "M1", "muDong": 241.0, "muDay": 138.0, "tongTuoi": 379.0}, {"id": "BM-20260612-250-M1", "ngay": "2026-06-12", "to": "4", "vuon": "B", "xe": "XE-02", "msnv": "250", "tenCN": "CHHOUEN HAN", "muon": "M1", "muDong": 343.0, "muDay": 279.0, "tongTuoi": 622.0}, {"id": "BM-20260612-240-M1", "ngay": "2026-06-12", "to": "2", "vuon": "D", "xe": "XE-01", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 334.0, "muDay": 144.0, "tongTuoi": 478.0}, {"id": "BM-20260612-258-M1", "ngay": "2026-06-12", "to": "5", "vuon": "B", "xe": "XE-01", "msnv": "258", "tenCN": "DOEM DOEURN", "muon": "M1", "muDong": 582.0, "muDay": 329.0, "tongTuoi": 911.0}, {"id": "BM-20260612-256-M1", "ngay": "2026-06-12", "to": "5", "vuon": "D", "xe": "XE-01", "msnv": "256", "tenCN": "LEANG SOUT", "muon": "M1", "muDong": 107.0, "muDay": 222.0, "tongTuoi": 329.0}, {"id": "BM-20260612-259-M1", "ngay": "2026-06-12", "to": "5", "vuon": "C", "xe": "XE-01", "msnv": "259", "tenCN": "NOY VANGITIN", "muon": "M1", "muDong": 306.0, "muDay": 84.0, "tongTuoi": 390.0}, {"id": "BM-20260613-262-M1", "ngay": "2026-06-13", "to": "5", "vuon": "A", "xe": "XE-02", "msnv": "262", "tenCN": "BUN SOUNSREYAT", "muon": "M1", "muDong": 171.0, "muDay": 44.0, "tongTuoi": 215.0}, {"id": "BM-20260613-234-M1", "ngay": "2026-06-13", "to": "1", "vuon": "B", "xe": "XE-01", "msnv": "234", "tenCN": "KAKK SOKKHEY", "muon": "M1", "muDong": 402.0, "muDay": 427.0, "tongTuoi": 829.0}, {"id": "BM-20260613-238-M1", "ngay": "2026-06-13", "to": "2", "vuon": "B", "xe": "XE-01", "msnv": "238", "tenCN": "HEANG SEANGLY", "muon": "M1", "muDong": 155.0, "muDay": 47.0, "tongTuoi": 202.0}, {"id": "BM-20260613-245-M1", "ngay": "2026-06-13", "to": "3", "vuon": "A", "xe": "XE-01", "msnv": "245", "tenCN": "VE SAVIT", "muon": "M1", "muDong": 346.0, "muDay": 248.0, "tongTuoi": 594.0}, {"id": "BM-20260613-233-M1", "ngay": "2026-06-13", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "233", "tenCN": "SO SREYPAN", "muon": "M1", "muDong": 375.0, "muDay": 179.0, "tongTuoi": 554.0}, {"id": "BM-20260613-258-M1", "ngay": "2026-06-13", "to": "5", "vuon": "B", "xe": "XE-02", "msnv": "258", "tenCN": "DOEM DOEURN", "muon": "M1", "muDong": 294.0, "muDay": 110.0, "tongTuoi": 404.0}, {"id": "BM-20260613-241-M1", "ngay": "2026-06-13", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 97.0, "muDay": 167.0, "tongTuoi": 264.0}, {"id": "BM-20260613-247-M1", "ngay": "2026-06-13", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "247", "tenCN": "CHEA POV", "muon": "M1", "muDong": 487.0, "muDay": 149.0, "tongTuoi": 636.0}, {"id": "BM-20260613-242-M1", "ngay": "2026-06-13", "to": "2", "vuon": "B", "xe": "XE-01", "msnv": "242", "tenCN": "YORN NET", "muon": "M1", "muDong": 443.0, "muDay": 96.0, "tongTuoi": 539.0}, {"id": "BM-20260613-246-M1", "ngay": "2026-06-13", "to": "3", "vuon": "B", "xe": "XE-02", "msnv": "246", "tenCN": "TOEU KOV", "muon": "M1", "muDong": 343.0, "muDay": 69.0, "tongTuoi": 412.0}, {"id": "BM-20260615-242-M1", "ngay": "2026-06-15", "to": "2", "vuon": "B", "xe": "XE-02", "msnv": "242", "tenCN": "YORN NET", "muon": "M1", "muDong": 107.0, "muDay": 192.0, "tongTuoi": 299.0}, {"id": "BM-20260615-252-M1", "ngay": "2026-06-15", "to": "4", "vuon": "D", "xe": "XE-02", "msnv": "252", "tenCN": "THOL CHANTHA", "muon": "M1", "muDong": 597.0, "muDay": 396.0, "tongTuoi": 993.0}, {"id": "BM-20260615-239-M1", "ngay": "2026-06-15", "to": "2", "vuon": "C", "xe": "XE-02", "msnv": "239", "tenCN": "NET DINA", "muon": "M1", "muDong": 437.0, "muDay": 245.0, "tongTuoi": 682.0}, {"id": "BM-20260615-255-M1", "ngay": "2026-06-15", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "255", "tenCN": "MAO EAB", "muon": "M1", "muDong": 497.0, "muDay": 185.0, "tongTuoi": 682.0}, {"id": "BM-20260615-243-M1", "ngay": "2026-06-15", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "243", "tenCN": "HIM SAROM", "muon": "M1", "muDong": 567.0, "muDay": 519.0, "tongTuoi": 1086.0}, {"id": "BM-20260615-259-M1", "ngay": "2026-06-15", "to": "5", "vuon": "C", "xe": "XE-01", "msnv": "259", "tenCN": "NOY VANGITIN", "muon": "M1", "muDong": 688.0, "muDay": 364.0, "tongTuoi": 1052.0}, {"id": "BM-20260615-254-M1", "ngay": "2026-06-15", "to": "4", "vuon": "B", "xe": "XE-01", "msnv": "254", "tenCN": "TAM SREYINY", "muon": "M1", "muDong": 428.0, "muDay": 120.0, "tongTuoi": 548.0}, {"id": "BM-20260615-253-M1", "ngay": "2026-06-15", "to": "4", "vuon": "A", "xe": "XE-02", "msnv": "253", "tenCN": "CHHOM SREYNA", "muon": "M1", "muDong": 438.0, "muDay": 150.0, "tongTuoi": 588.0}, {"id": "BM-20260615-241-M1", "ngay": "2026-06-15", "to": "2", "vuon": "A", "xe": "XE-02", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 692.0, "muDay": 404.0, "tongTuoi": 1096.0}, {"id": "BM-20260615-249-M1", "ngay": "2026-06-15", "to": "3", "vuon": "A", "xe": "XE-01", "msnv": "249", "tenCN": "KEAN RIT", "muon": "M1", "muDong": 315.0, "muDay": 273.0, "tongTuoi": 588.0}, {"id": "BM-20260616-246-M1", "ngay": "2026-06-16", "to": "3", "vuon": "B", "xe": "XE-01", "msnv": "246", "tenCN": "TOEU KOV", "muon": "M1", "muDong": 475.0, "muDay": 329.0, "tongTuoi": 804.0}, {"id": "BM-20260616-252-M1", "ngay": "2026-06-16", "to": "4", "vuon": "D", "xe": "XE-02", "msnv": "252", "tenCN": "THOL CHANTHA", "muon": "M1", "muDong": 482.0, "muDay": 272.0, "tongTuoi": 754.0}, {"id": "BM-20260616-249-M1", "ngay": "2026-06-16", "to": "3", "vuon": "A", "xe": "XE-02", "msnv": "249", "tenCN": "KEAN RIT", "muon": "M1", "muDong": 307.0, "muDay": 324.0, "tongTuoi": 631.0}, {"id": "BM-20260616-236-M1", "ngay": "2026-06-16", "to": "1", "vuon": "D", "xe": "XE-02", "msnv": "236", "tenCN": "SRENG SEANGHIM", "muon": "M1", "muDong": 495.0, "muDay": 334.0, "tongTuoi": 829.0}, {"id": "BM-20260616-245-M1", "ngay": "2026-06-16", "to": "3", "vuon": "A", "xe": "XE-02", "msnv": "245", "tenCN": "VE SAVIT", "muon": "M1", "muDong": 315.0, "muDay": 358.0, "tongTuoi": 673.0}, {"id": "BM-20260616-251-M1", "ngay": "2026-06-16", "to": "4", "vuon": "C", "xe": "XE-01", "msnv": "251", "tenCN": "LOEUNG SAVOEUN", "muon": "M1", "muDong": 107.0, "muDay": 239.0, "tongTuoi": 346.0}, {"id": "BM-20260616-239-M1", "ngay": "2026-06-16", "to": "2", "vuon": "C", "xe": "XE-01", "msnv": "239", "tenCN": "NET DINA", "muon": "M1", "muDong": 244.0, "muDay": 159.0, "tongTuoi": 403.0}, {"id": "BM-20260616-241-M1", "ngay": "2026-06-16", "to": "2", "vuon": "A", "xe": "XE-02", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 549.0, "muDay": 292.0, "tongTuoi": 841.0}, {"id": "BM-20260616-234-M1", "ngay": "2026-06-16", "to": "1", "vuon": "B", "xe": "XE-02", "msnv": "234", "tenCN": "KAKK SOKKHEY", "muon": "M1", "muDong": 114.0, "muDay": 229.0, "tongTuoi": 343.0}, {"id": "BM-20260616-262-M1", "ngay": "2026-06-16", "to": "5", "vuon": "A", "xe": "XE-02", "msnv": "262", "tenCN": "BUN SOUNSREYAT", "muon": "M1", "muDong": 85.0, "muDay": 172.0, "tongTuoi": 257.0}, {"id": "BM-20260617-261-M1", "ngay": "2026-06-17", "to": "5", "vuon": "D", "xe": "XE-02", "msnv": "261", "tenCN": "KHMON KHENG", "muon": "M1", "muDong": 749.0, "muDay": 455.0, "tongTuoi": 1204.0}, {"id": "BM-20260617-236-M1", "ngay": "2026-06-17", "to": "1", "vuon": "D", "xe": "XE-01", "msnv": "236", "tenCN": "SRENG SEANGHIM", "muon": "M1", "muDong": 732.0, "muDay": 386.0, "tongTuoi": 1118.0}, {"id": "BM-20260617-247-M1", "ngay": "2026-06-17", "to": "3", "vuon": "C", "xe": "XE-02", "msnv": "247", "tenCN": "CHEA POV", "muon": "M1", "muDong": 386.0, "muDay": 275.0, "tongTuoi": 661.0}, {"id": "BM-20260617-237-M1", "ngay": "2026-06-17", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "237", "tenCN": "KHEAM PHOEUN", "muon": "M1", "muDong": 609.0, "muDay": 283.0, "tongTuoi": 892.0}, {"id": "BM-20260617-259-M1", "ngay": "2026-06-17", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "259", "tenCN": "NOY VANGITIN", "muon": "M1", "muDong": 259.0, "muDay": 227.0, "tongTuoi": 486.0}, {"id": "BM-20260617-254-M1", "ngay": "2026-06-17", "to": "4", "vuon": "B", "xe": "XE-01", "msnv": "254", "tenCN": "TAM SREYINY", "muon": "M1", "muDong": 790.0, "muDay": 420.0, "tongTuoi": 1210.0}, {"id": "BM-20260617-249-M1", "ngay": "2026-06-17", "to": "3", "vuon": "A", "xe": "XE-01", "msnv": "249", "tenCN": "KEAN RIT", "muon": "M1", "muDong": 542.0, "muDay": 270.0, "tongTuoi": 812.0}, {"id": "BM-20260617-250-M1", "ngay": "2026-06-17", "to": "4", "vuon": "B", "xe": "XE-02", "msnv": "250", "tenCN": "CHHOUEN HAN", "muon": "M1", "muDong": 386.0, "muDay": 370.0, "tongTuoi": 756.0}, {"id": "BM-20260617-252-M1", "ngay": "2026-06-17", "to": "4", "vuon": "D", "xe": "XE-01", "msnv": "252", "tenCN": "THOL CHANTHA", "muon": "M1", "muDong": 129.0, "muDay": 148.0, "tongTuoi": 277.0}, {"id": "BM-20260618-234-M1", "ngay": "2026-06-18", "to": "1", "vuon": "B", "xe": "XE-02", "msnv": "234", "tenCN": "KAKK SOKKHEY", "muon": "M1", "muDong": 489.0, "muDay": 277.0, "tongTuoi": 766.0}, {"id": "BM-20260618-241-M1", "ngay": "2026-06-18", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 440.0, "muDay": 500.0, "tongTuoi": 940.0}, {"id": "BM-20260618-245-M1", "ngay": "2026-06-18", "to": "3", "vuon": "A", "xe": "XE-01", "msnv": "245", "tenCN": "VE SAVIT", "muon": "M1", "muDong": 472.0, "muDay": 236.0, "tongTuoi": 708.0}, {"id": "BM-20260618-243-M1", "ngay": "2026-06-18", "to": "3", "vuon": "C", "xe": "XE-02", "msnv": "243", "tenCN": "HIM SAROM", "muon": "M1", "muDong": 288.0, "muDay": 294.0, "tongTuoi": 582.0}, {"id": "BM-20260618-239-M1", "ngay": "2026-06-18", "to": "2", "vuon": "C", "xe": "XE-01", "msnv": "239", "tenCN": "NET DINA", "muon": "M1", "muDong": 350.0, "muDay": 312.0, "tongTuoi": 662.0}, {"id": "BM-20260618-247-M1", "ngay": "2026-06-18", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "247", "tenCN": "CHEA POV", "muon": "M1", "muDong": 121.0, "muDay": 233.0, "tongTuoi": 354.0}, {"id": "BM-20260618-258-M1", "ngay": "2026-06-18", "to": "5", "vuon": "B", "xe": "XE-01", "msnv": "258", "tenCN": "DOEM DOEURN", "muon": "M1", "muDong": 315.0, "muDay": 294.0, "tongTuoi": 609.0}, {"id": "BM-20260618-255-M1", "ngay": "2026-06-18", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "255", "tenCN": "MAO EAB", "muon": "M1", "muDong": 746.0, "muDay": 459.0, "tongTuoi": 1205.0}, {"id": "BM-20260618-259-M1", "ngay": "2026-06-18", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "259", "tenCN": "NOY VANGITIN", "muon": "M1", "muDong": 523.0, "muDay": 389.0, "tongTuoi": 912.0}, {"id": "BM-20260619-259-M1", "ngay": "2026-06-19", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "259", "tenCN": "NOY VANGITIN", "muon": "M1", "muDong": 153.0, "muDay": 154.0, "tongTuoi": 307.0}, {"id": "BM-20260619-235-M1", "ngay": "2026-06-19", "to": "1", "vuon": "C", "xe": "XE-01", "msnv": "235", "tenCN": "KOEMHENG KHENG", "muon": "M1", "muDong": 578.0, "muDay": 133.0, "tongTuoi": 711.0}, {"id": "BM-20260619-241-M1", "ngay": "2026-06-19", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "241", "tenCN": "NHIEN TROLACH", "muon": "M1", "muDong": 310.0, "muDay": 172.0, "tongTuoi": 482.0}, {"id": "BM-20260619-247-M1", "ngay": "2026-06-19", "to": "3", "vuon": "C", "xe": "XE-01", "msnv": "247", "tenCN": "CHEA POV", "muon": "M1", "muDong": 396.0, "muDay": 337.0, "tongTuoi": 733.0}, {"id": "BM-20260619-240-M1", "ngay": "2026-06-19", "to": "2", "vuon": "D", "xe": "XE-01", "msnv": "240", "tenCN": "ERT SOPHEAK", "muon": "M1", "muDong": 518.0, "muDay": 370.0, "tongTuoi": 888.0}, {"id": "BM-20260619-258-M1", "ngay": "2026-06-19", "to": "5", "vuon": "B", "xe": "XE-02", "msnv": "258", "tenCN": "DOEM DOEURN", "muon": "M1", "muDong": 438.0, "muDay": 317.0, "tongTuoi": 755.0}, {"id": "BM-20260619-251-M1", "ngay": "2026-06-19", "to": "4", "vuon": "C", "xe": "XE-02", "msnv": "251", "tenCN": "LOEUNG SAVOEUN", "muon": "M1", "muDong": 221.0, "muDay": 60.0, "tongTuoi": 281.0}, {"id": "BM-20260619-252-M1", "ngay": "2026-06-19", "to": "4", "vuon": "D", "xe": "XE-01", "msnv": "252", "tenCN": "THOL CHANTHA", "muon": "M1", "muDong": 201.0, "muDay": 215.0, "tongTuoi": 416.0}, {"id": "BM-20260619-245-M1", "ngay": "2026-06-19", "to": "3", "vuon": "A", "xe": "XE-02", "msnv": "245", "tenCN": "VE SAVIT", "muon": "M1", "muDong": 695.0, "muDay": 257.0, "tongTuoi": 952.0}, {"id": "BM-20260620-234-M1", "ngay": "2026-06-20", "to": "1", "vuon": "B", "xe": "XE-02", "msnv": "234", "tenCN": "KAKK SOKKHEY", "muon": "M1", "muDong": 423.0, "muDay": 327.0, "tongTuoi": 750.0}, {"id": "BM-20260620-262-M1", "ngay": "2026-06-20", "to": "5", "vuon": "A", "xe": "XE-02", "msnv": "262", "tenCN": "BUN SOUNSREYAT", "muon": "M1", "muDong": 265.0, "muDay": 155.0, "tongTuoi": 420.0}, {"id": "BM-20260620-250-M1", "ngay": "2026-06-20", "to": "4", "vuon": "B", "xe": "XE-01", "msnv": "250", "tenCN": "CHHOUEN HAN", "muon": "M1", "muDong": 240.0, "muDay": 161.0, "tongTuoi": 401.0}, {"id": "BM-20260620-242-M1", "ngay": "2026-06-20", "to": "2", "vuon": "B", "xe": "XE-01", "msnv": "242", "tenCN": "YORN NET", "muon": "M1", "muDong": 465.0, "muDay": 371.0, "tongTuoi": 836.0}, {"id": "BM-20260620-255-M1", "ngay": "2026-06-20", "to": "5", "vuon": "C", "xe": "XE-02", "msnv": "255", "tenCN": "MAO EAB", "muon": "M1", "muDong": 494.0, "muDay": 497.0, "tongTuoi": 991.0}, {"id": "BM-20260620-237-M1", "ngay": "2026-06-20", "to": "2", "vuon": "A", "xe": "XE-01", "msnv": "237", "tenCN": "KHEAM PHOEUN", "muon": "M1", "muDong": 342.0, "muDay": 49.0, "tongTuoi": 391.0}, {"id": "BM-20260620-253-M1", "ngay": "2026-06-20", "to": "4", "vuon": "A", "xe": "XE-01", "msnv": "253", "tenCN": "CHHOM SREYNA", "muon": "M1", "muDong": 300.0, "muDay": 104.0, "tongTuoi": 404.0}, {"id": "BM-20260620-248-M1", "ngay": "2026-06-20", "to": "3", "vuon": "D", "xe": "XE-01", "msnv": "248", "tenCN": "NTH LINI", "muon": "M1", "muDong": 292.0, "muDay": 48.0, "tongTuoi": 340.0}, {"id": "BM-20260620-236-M1", "ngay": "2026-06-20", "to": "1", "vuon": "D", "xe": "XE-01", "msnv": "236", "tenCN": "SRENG SEANGHIM", "muon": "M1", "muDong": 509.0, "muDay": 202.0, "tongTuoi": 711.0}, {"id": "BM-20260620-233-M1", "ngay": "2026-06-20", "to": "1", "vuon": "A", "xe": "XE-01", "msnv": "233", "tenCN": "SO SREYPAN", "muon": "M1", "muDong": 499.0, "muDay": 270.0, "tongTuoi": 769.0}], "luong": [{"msnv": "233", "ten": "SO SREYPAN", "khmer": "ស្រីប៉ាន", "to": "1", "soCong": 0, "ngayCN": 0, "tienCC": 0, "tongMu": 2686.0, "tienSL": 805800.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 61.68, "tongLuong": 805800.0}, {"msnv": "234", "ten": "KAKK SOKKHEY", "khmer": "កាក់ សុខ្ខី", "to": "1", "soCong": 2, "ngayCN": 0, "tienCC": 40000, "tongMu": 2688.0, "tienSL": 806400.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 80.65, "tongLuong": 846400.0}, {"msnv": "235", "ten": "KOEMHENG KHENG", "khmer": "គឹម ហែង", "to": "1", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 1565.0, "tienSL": 469500.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 86.56, "tongLuong": 529500.0}, {"msnv": "236", "ten": "SRENG SEANGHIM", "khmer": "ស្រែង សាំង ហ៊ីម", "to": "1", "soCong": 5, "ngayCN": 0, "tienCC": 100000, "tongMu": 3068.0, "tienSL": 1822.0, "xepHang": "D", "tienKT": -50000, "hieuSuat": 217.59, "tongLuong": 51822.0}, {"msnv": "237", "ten": "KHEAM PHOEUN", "khmer": "ខែម ភឿន", "to": "2", "soCong": 7, "ngayCN": 0, "tienCC": 140000, "tongMu": 2774.0, "tienSL": 832200.0, "xepHang": "C", "tienKT": -40000, "hieuSuat": 80.66, "tongLuong": 932200.0}, {"msnv": "238", "ten": "HEANG SEANGLY", "khmer": "ហ៊ាង សាំងលី", "to": "2", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 422.0, "tienSL": 126600.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 16.88, "tongLuong": 206600.0}, {"msnv": "239", "ten": "NET DINA", "khmer": "នែត ឌីណា", "to": "2", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 1747.0, "tienSL": 524100.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 65.14, "tongLuong": 584100.0}, {"msnv": "240", "ten": "ERT SOPHEAK", "khmer": "អ ត សុភ័ក្ត្រ", "to": "2", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 2864.0, "tienSL": 916480.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 99.13, "tongLuong": 996480.0}, {"msnv": "241", "ten": "NHIEN TROLACH", "khmer": "ញ៉ែន ត្រូឡាច", "to": "2", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 5762.0, "tienSL": 3289.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 194.86, "tongLuong": 83289.0}, {"msnv": "242", "ten": "YORN NET", "khmer": "យ ន នែត", "to": "2", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 2144.0, "tienSL": 643200.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 79.94, "tongLuong": 723200.0}, {"msnv": "243", "ten": "HIM SAROM", "khmer": "ហ៊ីម សារ៉ម", "to": "3", "soCong": 5, "ngayCN": 0, "tienCC": 100000, "tongMu": 2005.0, "tienSL": 1998.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 100.45, "tongLuong": 101998.0}, {"msnv": "244", "ten": "SAO NET", "khmer": "សាវ នែត", "to": "3", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 0.0, "tienSL": 0.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 0.0, "tongLuong": 60000.0}, {"msnv": "245", "ten": "VE SAVIT", "khmer": "វ ស្រ័វ", "to": "3", "soCong": 5, "ngayCN": 0, "tienCC": 100000, "tongMu": 4068.0, "tienSL": 2053.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 303.58, "tongLuong": 102053.0}, {"msnv": "246", "ten": "TOEU KOV", "khmer": "ទ្រើ កូវ", "to": "3", "soCong": 2, "ngayCN": 0, "tienCC": 40000, "tongMu": 1216.0, "tienSL": 364800.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 59.87, "tongLuong": 404800.0}, {"msnv": "247", "ten": "CHEA POV", "khmer": "ជា ព", "to": "3", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 3130.0, "tienSL": 939000.0, "xepHang": "A+", "tienKT": 50000, "hieuSuat": 89.61, "tongLuong": 1069000.0}, {"msnv": "248", "ten": "NTH LINI", "khmer": "ន្ទ លីន", "to": "3", "soCong": 1, "ngayCN": 0, "tienCC": 20000, "tongMu": 340.0, "tienSL": 102000.0, "xepHang": "A+", "tienKT": 50000, "hieuSuat": 13.07, "tongLuong": 172000.0}, {"msnv": "249", "ten": "KEAN RIT", "khmer": "គៀន រ៉ិត", "to": "3", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 2031.0, "tienSL": 609300.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 41.39, "tongLuong": 669300.0}, {"msnv": "250", "ten": "CHHOUEN HAN", "khmer": "ឈួន ហាន", "to": "4", "soCong": 2, "ngayCN": 0, "tienCC": 40000, "tongMu": 2570.0, "tienSL": 771000.0, "xepHang": "A+", "tienKT": 50000, "hieuSuat": 67.76, "tongLuong": 861000.0}, {"msnv": "251", "ten": "LOEUNG SAVOEUN", "khmer": "លឿង សាវ៉ឺន", "to": "4", "soCong": 2, "ngayCN": 0, "tienCC": 40000, "tongMu": 1371.0, "tienSL": 411300.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 31.22, "tongLuong": 451300.0}, {"msnv": "252", "ten": "THOL CHANTHA", "khmer": "ថោល ចន្ទ", "to": "4", "soCong": 5, "ngayCN": 0, "tienCC": 100000, "tongMu": 2440.0, "tienSL": 732000.0, "xepHang": "C", "tienKT": -40000, "hieuSuat": 85.34, "tongLuong": 792000.0}, {"msnv": "253", "ten": "CHHOM SREYNA", "khmer": "ឈំ ស្រីណា", "to": "4", "soCong": 5, "ngayCN": 0, "tienCC": 100000, "tongMu": 1450.0, "tienSL": 435000.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 31.5, "tongLuong": 535000.0}, {"msnv": "254", "ten": "TAM SREYINY", "khmer": "តាំ ស្រីអ៊ីនី", "to": "4", "soCong": 4, "ngayCN": 0, "tienCC": 80000, "tongMu": 3009.0, "tienSL": 962880.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 95.77, "tongLuong": 1042880.0}, {"msnv": "255", "ten": "MAO EAB", "khmer": "ម៉ាវ អ៊ែប", "to": "5", "soCong": 1, "ngayCN": 0, "tienCC": 20000, "tongMu": 2878.0, "tienSL": 863400.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 65.83, "tongLuong": 883400.0}, {"msnv": "256", "ten": "LEANG SOUT", "khmer": "លាង សូត", "to": "5", "soCong": 2, "ngayCN": 0, "tienCC": 40000, "tongMu": 888.0, "tienSL": 266400.0, "xepHang": "D", "tienKT": -50000, "hieuSuat": 27.17, "tongLuong": 256400.0}, {"msnv": "257", "ten": "SONG THNGAY", "khmer": "សុង ថ្ងៃ", "to": "5", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 1762.0, "tienSL": 528600.0, "xepHang": "D", "tienKT": -50000, "hieuSuat": 42.56, "tongLuong": 538600.0}, {"msnv": "258", "ten": "DOEM DOEURN", "khmer": "ដោម ដឺន", "to": "5", "soCong": 6, "ngayCN": 0, "tienCC": 120000, "tongMu": 3244.0, "tienSL": 2837.0, "xepHang": "C", "tienKT": -40000, "hieuSuat": 116.77, "tongLuong": 82837.0}, {"msnv": "259", "ten": "NOY VANGITIN", "khmer": "នយ វ៉ាន់ជីទីន", "to": "5", "soCong": 1, "ngayCN": 0, "tienCC": 20000, "tongMu": 3147.0, "tienSL": 2664.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 121.55, "tongLuong": 22664.0}, {"msnv": "261", "ten": "KHMON KHENG", "khmer": "ខ្មន ខែង", "to": "5", "soCong": 3, "ngayCN": 0, "tienCC": 60000, "tongMu": 1204.0, "tienSL": 361200.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 43.77, "tongLuong": 421200.0}, {"msnv": "262", "ten": "BUN SOUNSREYAT", "khmer": "បូន ស្រីអ...", "to": "5", "soCong": 1, "ngayCN": 0, "tienCC": 20000, "tongMu": 1496.0, "tienSL": 448800.0, "xepHang": "B", "tienKT": 0, "hieuSuat": 45.53, "tongLuong": 468800.0}], "hs": {"233": {"khMu": 4355.0, "thucTe": 2686.0, "hieuSuat": 61.68}, "234": {"khMu": 3333.0, "thucTe": 2688.0, "hieuSuat": 80.65}, "235": {"khMu": 1808.0, "thucTe": 1565.0, "hieuSuat": 86.56}, "236": {"khMu": 1410.0, "thucTe": 3068.0, "hieuSuat": 217.59}, "237": {"khMu": 3439.0, "thucTe": 2774.0, "hieuSuat": 80.66}, "238": {"khMu": 2500.0, "thucTe": 422.0, "hieuSuat": 16.88}, "239": {"khMu": 2682.0, "thucTe": 1747.0, "hieuSuat": 65.14}, "240": {"khMu": 2889.0, "thucTe": 2864.0, "hieuSuat": 99.13}, "241": {"khMu": 2957.0, "thucTe": 5762.0, "hieuSuat": 194.86}, "242": {"khMu": 2682.0, "thucTe": 2144.0, "hieuSuat": 79.94}, "243": {"khMu": 1996.0, "thucTe": 2005.0, "hieuSuat": 100.45}, "244": {"khMu": 4264.0, "thucTe": 0.0, "hieuSuat": 0.0}, "245": {"khMu": 1340.0, "thucTe": 4068.0, "hieuSuat": 303.58}, "246": {"khMu": 2031.0, "thucTe": 1216.0, "hieuSuat": 59.87}, "247": {"khMu": 3493.0, "thucTe": 3130.0, "hieuSuat": 89.61}, "248": {"khMu": 2602.0, "thucTe": 340.0, "hieuSuat": 13.07}, "249": {"khMu": 4907.0, "thucTe": 2031.0, "hieuSuat": 41.39}, "250": {"khMu": 3793.0, "thucTe": 2570.0, "hieuSuat": 67.76}, "251": {"khMu": 4391.0, "thucTe": 1371.0, "hieuSuat": 31.22}, "252": {"khMu": 2859.0, "thucTe": 2440.0, "hieuSuat": 85.34}, "253": {"khMu": 4603.0, "thucTe": 1450.0, "hieuSuat": 31.5}, "254": {"khMu": 3142.0, "thucTe": 3009.0, "hieuSuat": 95.77}, "255": {"khMu": 4372.0, "thucTe": 2878.0, "hieuSuat": 65.83}, "256": {"khMu": 3268.0, "thucTe": 888.0, "hieuSuat": 27.17}, "257": {"khMu": 4140.0, "thucTe": 1762.0, "hieuSuat": 42.56}, "258": {"khMu": 2778.0, "thucTe": 3244.0, "hieuSuat": 116.77}, "259": {"khMu": 2589.0, "thucTe": 3147.0, "hieuSuat": 121.55}, "261": {"khMu": 2751.0, "thucTe": 1204.0, "hieuSuat": 43.77}, "262": {"khMu": 3286.0, "thucTe": 1496.0, "hieuSuat": 45.53}}};
+
+// ────────────────────────────────────────────────
+//  INIT
+// ────────────────────────────────────────────────
+window.onload = async () => {
+  // ── Render ngay với embed data (< 100ms, không chờ network) ──
+  DATA = { bm: EMBED_DATA.bm, luong: EMBED_DATA.luong, hs: EMBED_DATA.hs||{} };
+  initFilters();
+  renderPage1();
+  renderPage2();
+  renderPage3();
+  document.getElementById('loading').style.display = 'none';
+  updateDataSourceLabel(
+    window.location.protocol === 'file:' 
+      ? '📦 Offline (file://) · Push lên GitHub để dùng live data'
+      : '📦 Data tháng 06/2026 · đang sync live...'
+  );
+
+  // ── Sau đó fetch live ở background, không block UI ──
+  if (USE_PROXY) {
+    setTimeout(async () => {
+      try {
+        await loadFromSheets();
+        initFilters();
+        renderPage1();
+        renderPage2();
+        renderPage3();
+        const now = new Date().toLocaleTimeString('vi-VN');
+        updateDataSourceLabel('🟢 Google Sheets Live · ' + now);
+      } catch(err) {
+        console.warn('Background fetch failed:', err.message);
+        updateDataSourceLabel('📦 Offline · ' + err.message.slice(0,35));
+      }
+    }, 200);
+  } else {
+    updateDataSourceLabel('📦 Data tháng 06/2026');
+  }
+};
+
+async function loadFromSheets() {
+  // Fetch PhieuBocMu + Luong NV in parallel
+  const [bocMuRows, luongRows, hsRows] = await Promise.all([
+    fetchSheet(SHEET_GIDS.bocMu),
+    fetchSheet(SHEET_GIDS.luong).catch(()=>fetchSheet(8)),
+    fetchSheet(SHEET_GIDS.hieuSuat).catch(()=>fetchSheet(10)),
+  ]);
+
+  // Parse BocMu — date format DD/MM/YYYY
+  const bm = bocMuRows.filter(r => (r['ID']||'').startsWith('BM-')).map(r => {
+    const raw = r['NGAY BOC']||'';
+    let ngay = raw;
+    if (raw.includes('/')) {
+      const p = raw.split('/'); // DD/MM/YYYY
+      ngay = p[2]+'-'+p[1]+'-'+p[0];
+    }
+    return {
+      id: r['ID'], ngay, to: r['TO']||'', vuon: r['VUON BOC']||'',
+      xe: r['MA XE']||'N/A', msnv: r['MSNV']||'', tenCN: r['HO TEN CONG NHAN']||'',
+      muon: (r['ID']||'').match(/-(M\d+)$/)?.[1]||'M1',
+      muDong: parseVN(r['MU DONG TUOI']), muDay: parseVN(r['MU DAY TUOI']),
+      tongTuoi: parseVN(r['TONG SAN LUONG TUOI']),
+    };
+  });
+
+  // Parse Luong NV — multi-row header, data starts at row where col0 is numeric
+  const luong = luongRows.filter(r => {
+    const id = r['Mã NV']||r[Object.keys(r)[0]]||'';
+    return /^\d{3}$/.test(String(id).trim());
+  }).map(r => {
+    const keys = Object.keys(r);
+    return {
+      msnv: String(r[keys[0]]||'').trim(),
+      ten:  String(r[keys[1]]||'').trim(),
+      to:   String(r[keys[3]]||'').trim(),
+      soCong:   parseVN(r[keys[4]]),
+      ngayCN:   parseVN(r[keys[5]]),
+      tienCC:   parseVN(r[keys[6]]),
+      tongMu:   parseVN(r[keys[7]]),
+      tienSL:   parseVN(r[keys[8]]),
+      xepHang:  String(r[keys[9]]||'B').trim(),
+      tienKT:   parseVN(r[keys[10]]),
+      hieuSuat: parseVNPct(r[keys[11]]),
+      tongLuong:parseVN(r[keys[12]]),
+    };
+  });
+
+  // Parse Hiệu suất for KH vs actual
+  const hs = {};
+  hsRows.filter(r => /^\d{3}$/.test(String(r[Object.keys(r)[0]]||'').trim())).forEach(r => {
+    const keys = Object.keys(r);
+    const msnv = String(r[keys[0]]).trim();
+    hs[msnv] = { khMu: parseVN(r[keys[4]]), thucTe: parseVN(r[keys[5]]), hieuSuat: parseVNPct(r[keys[6]]) };
+  });
+
+  DATA = { bm, luong, hs };
+  const lbl = document.getElementById('data-source-lbl');
+  if (lbl) lbl.innerHTML = '🟢 Google Sheets · Realtime';
+}
+
+function parseVNPct(s) {
+  if (!s) return 0;
+  return parseFloat(String(s).replace('%','').replace('.','').replace(',','.')) || 0;
+}
+
+function parseVN(s) {
+  if (!s) return 0;
+  return parseFloat(String(s).replace(/\./g,'').replace(',','.')) || 0;
+}
+
+function processData(bm, ctRows, cnRows) {
+  // Aggregate luong per worker from BocMu
+  const luongMap = {};
+  bm.forEach(r => {
+    if (!luongMap[r.msnv]) luongMap[r.msnv] = {
+      msnv: r.msnv, ten: r.tenCN, to: r.to,
+      soCong: 0, tongMu: 0, muDong: 0, muDay: 0
+    };
+    const lm = luongMap[r.msnv];
+    lm.soCong++;
+    lm.tongMu += r.tongTuoi;
+    lm.muDong += r.muDong;
+    lm.muDay  += r.muDay;
+  });
+  const luong = Object.values(luongMap).map(lm => {
+    const hs = lm.tongMu / 900 * 100;
+    const xh = hs>=120?'A+':(hs>=100?'A':(hs>=80?'B':(hs>=60?'C':'D')));
+    const kt = ['A+','A'].includes(xh)?50000:(xh==='B'?0:xh==='C'?-40000:-50000);
+    const tienCC  = lm.soCong * 20000;
+    const tienSL  = Math.round(lm.tongMu * 300);
+    const tongLuong = tienCC + tienSL + kt;
+    return {...lm, hieuSuat: Math.round(hs*10)/10, xepHang: xh, tienKT: kt,
+            tienCC, tienSL, tongLuong};
+  });
+  return { bm, luong };
+}
+
+// ────────────────────────────────────────────────
+//  HELPERS
+// ────────────────────────────────────────────────
+const fmtN = n => Math.round(n).toLocaleString('vi-VN');
+const fmtK = n => {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n/1000).toFixed(0) + 'K';
+  return Math.round(n).toLocaleString('vi-VN');
+};
+const GREEN = '#1a6b3a'; const AMBER = '#e8a020'; const BLUE = '#1565c0';
+const RED = '#c0392b';
+const PALETTE = ['#1a6b3a','#2d8a52','#4caf74','#a8d8b8','#d4edd9'];
+const PALE    = ['rgba(26,107,58,.7)','rgba(21,101,192,.7)','rgba(232,160,32,.7)',
+                 'rgba(192,57,43,.7)','rgba(93,64,55,.7)'];
+
+function mkChart(id, type, labels, datasets, opts={}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type, data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'bottom', labels:{boxWidth:12,font:{size:11}} },
+                 tooltip: { callbacks:{} } },
+      scales: type==='bar'||type==='line' ? {
+        x: { grid:{display:false}, ticks:{font:{size:11}} },
+        y: { grid:{color:'#f0f0f0'}, ticks:{font:{size:11}} },
+        ...opts.scales
+      } : {},
+      ...opts.extra
+    }
+  });
+}
+
+function filteredBm() {
+  let d = DATA.bm;
+  if (filterFrom) d = d.filter(r => r.ngay >= filterFrom);
+  if (filterTo)   d = d.filter(r => r.ngay <= filterTo);
+  if (filterToSel) d = d.filter(r => r.to === filterToSel);
+  if (filterXe)   d = d.filter(r => r.xe === filterXe);
+  return d;
+}
+
+function filteredLuong(toSel='', xhSel='') {
+  let d = DATA.luong;
+  if (toSel) d = d.filter(r => r.to === toSel);
+  if (xhSel) d = d.filter(r => r.xepHang === xhSel);
+  return d;
+}
+
+function groupBy(arr, key, aggFns) {
+  const map = {};
+  arr.forEach(r => {
+    const k = r[key]||'—';
+    if (!map[k]) { map[k] = {}; Object.keys(aggFns).forEach(f => map[k][f] = 0); }
+    Object.keys(aggFns).forEach(f => map[k][f] = aggFns[f](map[k][f], r));
+  });
+  return Object.entries(map).map(([k, v]) => ({ [key]: k, ...v }));
+}
+
+// ────────────────────────────────────────────────
+//  FILTERS INIT
+// ────────────────────────────────────────────────
+function initFilters() {
+  const tos = [...new Set(DATA.bm.map(r => r.to))].sort();
+  const xes = [...new Set(DATA.bm.map(r => r.xe))].sort();
+  const dates = DATA.bm.map(r => r.ngay).filter(Boolean).sort();
+  const minD = dates[0]||''; const maxD = dates[dates.length-1]||'';
+  filterFrom = minD; filterTo = maxD;
+
+  const fi = document.getElementById('f-from');
+  const ft = document.getElementById('f-to');
+  if (fi) { fi.value = minD; fi.min = minD; fi.max = maxD; }
+  if (ft) { ft.value = maxD; ft.min = minD; ft.max = maxD; }
+
+  ['f-to-sel','f2-to','f3-to'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    tos.forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent='Tổ '+t; el.appendChild(o); });
+  });
+  const f2xe = document.getElementById('f2-xe');
+  if (f2xe) xes.forEach(x => { const o=document.createElement('option'); o.value=x; o.textContent=x; f2xe.appendChild(o); });
+
+  document.getElementById('p1-period').textContent =
+    `Kỳ báo cáo: ${minD.split('-').reverse().join('/')} → ${maxD.split('-').reverse().join('/')}`;
+}
+
+function applyFilter() {
+  filterFrom  = document.getElementById('f-from')?.value||'';
+  filterTo    = document.getElementById('f-to')?.value||'';
+  filterToSel = document.getElementById('f-to-sel')?.value||'';
+  renderPage1();
+}
+
+// ────────────────────────────────────────────────
+//  PAGE 1
+// ────────────────────────────────────────────────
+function renderPage1() {
+  const bm = filteredBm();
+  const totMu    = bm.reduce((s,r)=>s+r.tongTuoi,0);
+  const totDong  = bm.reduce((s,r)=>s+r.muDong,0);
+  const totDay   = bm.reduce((s,r)=>s+r.muDay,0);
+  const totLuong = DATA.luong.reduce((s,r)=>s+r.tongLuong,0);
+  const nCN      = new Set(bm.map(r=>r.msnv)).size;
+
+  document.getElementById('k-cn').textContent    = nCN;
+  document.getElementById('k-mu').textContent    = fmtK(totMu) + ' kg';
+  document.getElementById('k-mu-sub').textContent= fmtN(totMu) + ' kg thực tế';
+  document.getElementById('k-dong').textContent  = fmtK(totDong) + ' kg';
+  document.getElementById('k-dong-pct').textContent = (totMu?((totDong/totMu)*100).toFixed(1):0)+'% tổng';
+  document.getElementById('k-day').textContent   = fmtK(totDay) + ' kg';
+  document.getElementById('k-day-pct').textContent  = (totMu?((totDay/totMu)*100).toFixed(1):0)+'% tổng';
+  document.getElementById('k-luong').textContent = fmtK(totLuong);
+
+  // Trend by date
+  const byDate = {}; bm.forEach(r=>{
+    if(!byDate[r.ngay]) byDate[r.ngay]={dong:0,day:0};
+    byDate[r.ngay].dong+=r.muDong; byDate[r.ngay].day+=r.muDay;
+  });
+  const dates = Object.keys(byDate).sort();
+  const lblDates = dates.map(d=>{ const p=d.slice(5).split('-'); return p[1]+'/'+p[0]; });
+  // Build per-date per-TO breakdown for tooltip
+  const dateToMap = {};
+  bm.forEach(r=>{
+    if(!dateToMap[r.ngay]) dateToMap[r.ngay]={};
+    if(!dateToMap[r.ngay][r.to]) dateToMap[r.ngay][r.to]={dong:0,day:0};
+    dateToMap[r.ngay][r.to].dong+=r.muDong;
+    dateToMap[r.ngay][r.to].day+=r.muDay;
+  });
+  mkChart('c-trend','bar',lblDates,[
+    {label:'Mủ đông',data:dates.map(d=>byDate[d].dong),backgroundColor:GREEN+'cc',borderRadius:4,stack:'s'},
+    {label:'Mủ dây', data:dates.map(d=>byDate[d].day), backgroundColor:AMBER+'cc',borderRadius:4,stack:'s'},
+  ],{extra:{
+    plugins:{
+      legend:{position:'bottom'},
+      tooltip:{
+        enabled: false,
+        external: function(context) {
+          let tip = document.getElementById('custom-tooltip');
+          if(!tip){ tip=document.createElement('div'); tip.id='custom-tooltip'; document.body.appendChild(tip); }
+          if(context.tooltip.opacity===0){ tip.style.opacity='0'; return; }
+          const di = context.tooltip.dataPoints?.[0]?.dataIndex;
+          if(di===undefined){ tip.style.opacity='0'; return; }
+          const d = dates[di];
+          const byTo = dateToMap[d]||{};
+          const tos = Object.keys(byTo).sort();
+          const dp = d.slice(5).split('-');
+          const dateLabel = dp[1]+'/'+dp[0];
+          const totDong = tos.reduce((s,t)=>s+(byTo[t]?.dong||0),0);
+          const totDay  = tos.reduce((s,t)=>s+(byTo[t]?.day||0),0);
+          const fn = n => Math.round(n).toLocaleString('vi-VN');
+          let rows = tos.map(t=>{
+            const v=byTo[t]||{dong:0,day:0};
+            const tot=v.dong+v.day;
+            const pct=totDong+totDay>0?((tot/(totDong+totDay))*100).toFixed(0):0;
+            return `<tr>
+              <td style="padding:4px 10px 4px 0;color:#ccc;font-size:11px">Tổ \${t}</td>
+              <td style="padding:4px 8px;text-align:right;color:#4caf74;font-weight:600;font-size:11px">\${fn(v.dong)}</td>
+              <td style="padding:4px 8px;text-align:right;color:#e8a020;font-weight:600;font-size:11px">\${fn(v.day)}</td>
+              <td style="padding:4px 0 4px 8px;text-align:right;color:#fff;font-weight:700;font-size:11px">\${fn(tot)}</td>
+              <td style="padding:4px 0 4px 6px;text-align:right;color:#888;font-size:10px">\${pct}%</td>
+            </tr>`;
+          }).join('');
+          tip.innerHTML = `
+            <div style="background:#1e2a22;border:1px solid #2d4a35;border-radius:10px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:300px;font-family:'Segoe UI',Arial,sans-serif">
+              <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid #2d4a35">
+                📅 Ngày \${dateLabel}
+                <span style="float:right;font-size:11px;font-weight:400;color:#aaa">Tổng: \${fn(totDong+totDay)} kg</span>
+              </div>
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <th style="font-size:10px;color:#888;font-weight:600;text-align:left;padding-bottom:5px">Tổ</th>
+                    <th style="font-size:10px;color:#4caf74;font-weight:600;text-align:right;padding-bottom:5px">Mủ đông</th>
+                    <th style="font-size:10px;color:#e8a020;font-weight:600;text-align:right;padding-bottom:5px">Mủ dây</th>
+                    <th style="font-size:10px;color:#fff;font-weight:600;text-align:right;padding-bottom:5px">Tổng</th>
+                    <th style="font-size:10px;color:#888;font-weight:600;text-align:right;padding-bottom:5px">%</th>
+                  </tr>
+                </thead>
+                <tbody>\${rows}</tbody>
+                <tfoot>
+                  <tr style="border-top:1px solid #2d4a35">
+                    <td style="padding:5px 10px 0 0;font-size:11px;color:#aaa;font-weight:600">Tổng cộng</td>
+                    <td style="padding:5px 8px 0;text-align:right;color:#4caf74;font-weight:700;font-size:12px">\${fn(totDong)}</td>
+                    <td style="padding:5px 8px 0;text-align:right;color:#e8a020;font-weight:700;font-size:12px">\${fn(totDay)}</td>
+                    <td style="padding:5px 0 0 8px;text-align:right;color:#fff;font-weight:800;font-size:13px">\${fn(totDong+totDay)}</td>
+                    <td style="padding:5px 0 0 6px;text-align:right;color:#888;font-size:10px">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>`;
+          const pos = context.chart.canvas.getBoundingClientRect();
+          tip.style.cssText = `
+            position:fixed;opacity:1;pointer-events:none;transition:opacity .1s;z-index:9999;
+            left:\${pos.left + window.scrollX + context.tooltip.caretX + 12}px;
+            top:\${pos.top  + window.scrollY + context.tooltip.caretY - 60}px;
+          `;
+          // Prevent going off right edge
+          const tipW = tip.offsetWidth||310;
+          const winW = window.innerWidth;
+          if(pos.left + context.tooltip.caretX + 12 + tipW > winW){
+            tip.style.left = (pos.left + window.scrollX + context.tooltip.caretX - tipW - 12)+'px';
+          }
+        }
+      }
+    }
+  }});
+
+  // By TO
+  const byTo = {}; bm.forEach(r=>{
+    if(!byTo[r.to]) byTo[r.to]=0;
+    byTo[r.to]+=r.tongTuoi;
+  });
+  const tos = Object.keys(byTo).sort();
+  mkChart('c-to','bar',tos.map(t=>'Tổ '+t),[
+    {label:'Mủ tươi (kg)',data:tos.map(t=>byTo[t]),backgroundColor:PALETTE,borderRadius:6}
+  ],{extra:{plugins:{legend:{display:false}}}});
+
+  // Dong vs Day by TO
+  const byTo2 = {}; bm.forEach(r=>{
+    if(!byTo2[r.to]) byTo2[r.to]={dong:0,day:0};
+    byTo2[r.to].dong+=r.muDong; byTo2[r.to].day+=r.muDay;
+  });
+  mkChart('c-dongday','bar',tos.map(t=>'Tổ '+t),[
+    {label:'Mủ đông',data:tos.map(t=>(byTo2[t]||{dong:0}).dong),backgroundColor:GREEN+'cc',borderRadius:4,stack:'s'},
+    {label:'Mủ dây', data:tos.map(t=>(byTo2[t]||{day:0}).day), backgroundColor:AMBER+'cc',borderRadius:4,stack:'s'},
+  ]);
+
+  // By XE
+  const byXe = {}; bm.forEach(r=>{
+    if(!r.xe || r.xe==='N/A') return;
+    if(!byXe[r.xe]) byXe[r.xe]={dong:0,day:0};
+    byXe[r.xe].dong+=r.muDong; byXe[r.xe].day+=r.muDay;
+  });
+  const xes = Object.keys(byXe).sort();
+  mkChart('c-xe','doughnut',xes,[
+    {data:xes.map(x=>byXe[x].dong+byXe[x].day),backgroundColor:[GREEN,AMBER,BLUE,RED].slice(0,xes.length),borderWidth:2}
+  ],{extra:{plugins:{legend:{position:'bottom'}}}});
+
+  // By Vuon (A/B/C/D from VUON BOC field)
+  const byVuon = {}; bm.forEach(r=>{
+    const v = r.vuon||'';
+    if(!v || v==='N/A') return;
+    if(!byVuon[v]) byVuon[v]=0; byVuon[v]+=r.tongTuoi;
+  });
+  // If no vuon field, fallback to group by TO
+  const vuonSrc = Object.keys(byVuon).length>=2 ? byVuon : (()=>{
+    const bt={}; bm.forEach(r=>{ const k='Tổ '+r.to; if(!bt[k]) bt[k]=0; bt[k]+=r.tongTuoi; }); return bt;
+  })();
+  const vuons = Object.keys(vuonSrc).sort();
+  const vuonLabels = vuons.map(v=>v.startsWith('Tổ')?v:'Vườn '+v);
+  const vuonColors = ['#1a6b3a','#2d8a52','#4caf74','#a8d8b8','#d4edd9'];
+  mkChart('c-muon','bar',vuonLabels,[
+    {label:'Mủ tươi (kg)',data:vuons.map(v=>vuonSrc[v]),backgroundColor:vuonColors.slice(0,vuons.length),borderRadius:6}
+  ],{extra:{plugins:{legend:{display:false}}}});
+}
+
+// ────────────────────────────────────────────────
+//  PAGE 2
+// ────────────────────────────────────────────────
+function renderPage2() {
+  filterToSel = document.getElementById('f2-to')?.value||'';
+  filterXe    = document.getElementById('f2-xe')?.value||'';
+  const bm = filteredBm();
+
+  // Heatmap
+  const dates = [...new Set(bm.map(r=>r.ngay))].sort();
+  const tos   = [...new Set(bm.map(r=>r.to))].sort();
+  const hmap  = {};
+  bm.forEach(r=>{ hmap[r.ngay+'|'+r.to]=(hmap[r.ngay+'|'+r.to]||0)+r.tongTuoi; });
+  const maxVal = Math.max(...Object.values(hmap), 1);
+
+  let html = '<thead><tr><th>Ngày</th>';
+  tos.forEach(t => html += `<th>Tổ ${t}</th>`);
+  html += '</tr></thead><tbody>';
+  dates.forEach(d => {
+    html += `<tr><td style="font-size:11px;color:#555;padding:5px 8px;white-space:nowrap">${(()=>{ const p=d.slice(5).split('-'); return p[1]+'/'+p[0]; })()}</td>`;
+    tos.forEach(t => {
+      const v = hmap[d+'|'+t]||0;
+      const intensity = v/maxVal;
+      const bg = `rgba(26,107,58,${0.1+intensity*0.85})`;
+      const fc = intensity>0.5 ? '#fff' : '#1a6b3a';
+      html += `<td style="background:${bg};color:${fc}">${v?fmtN(v):''}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('heatmap-table').innerHTML = html;
+
+  // Mini stats
+  const totMu  = bm.reduce((s,r)=>s+r.tongTuoi,0);
+  const totD   = bm.reduce((s,r)=>s+r.muDong,0);
+  const totDy  = bm.reduce((s,r)=>s+r.muDay,0);
+  const avgDay = dates.length ? totMu/dates.length : 0;
+  const ms = document.getElementById('mini-stats-sl');
+  ms.innerHTML = [
+    ['Tổng mủ tươi', fmtN(totMu)+' kg'],
+    ['Mủ đông', fmtN(totD)+' kg'],
+    ['Mủ dây', fmtN(totDy)+' kg'],
+    ['TB/ngày', fmtN(avgDay)+' kg'],
+  ].map(([l,v])=>`<div class="mini-stat"><div class="ms-lbl">${l}</div><div class="ms-val">${v}</div></div>`).join('');
+
+  // Vuon chart (p2)
+  const byVuon2={}; bm.forEach(r=>{
+    const vuon=r.vuon||('Tổ '+r.to);
+    if(!byVuon2[vuon]) byVuon2[vuon]=0; byVuon2[vuon]+=r.tongTuoi;
+  });
+  const vuons2=Object.keys(byVuon2).sort();
+  const vuonLabels2=vuons2.map(v=>v.startsWith('Tổ')?v:'Vườn '+v);
+  mkChart('c2-muon','bar',vuonLabels2,[
+    {label:'Mủ tươi (kg)',data:vuons2.map(v=>byVuon2[v]),backgroundColor:PALETTE.slice(0,vuons2.length),borderRadius:6}
+  ],{extra:{plugins:{legend:{display:false}}}});
+
+  // Trend
+  const byDate2={}; bm.forEach(r=>{
+    if(!byDate2[r.ngay]) byDate2[r.ngay]={dong:0,day:0};
+    byDate2[r.ngay].dong+=r.muDong; byDate2[r.ngay].day+=r.muDay;
+  });
+  mkChart('c2-trend','line',dates.map(d=>{ const p=d.slice(5).split('-'); return p[1]+'/'+p[0]; }), [
+    {label:'Mủ đông',data:dates.map(d=>byDate2[d]?.dong||0),borderColor:GREEN,backgroundColor:GREEN+'22',fill:true,tension:.3,pointRadius:3},
+    {label:'Mủ dây', data:dates.map(d=>byDate2[d]?.day||0), borderColor:AMBER,backgroundColor:AMBER+'22',fill:true,tension:.3,pointRadius:3},
+  ]);
+
+  // By XE
+  const byXe2={}; bm.forEach(r=>{
+    if(!r.xe || r.xe==='N/A') return;
+    if(!byXe2[r.xe]) byXe2[r.xe]={dong:0,day:0};
+    byXe2[r.xe].dong+=r.muDong; byXe2[r.xe].day+=r.muDay;
+  });
+  const xes2 = Object.keys(byXe2).sort();
+  mkChart('c2-xe','bar',xes2,[
+    {label:'Mủ đông',data:xes2.map(x=>byXe2[x].dong),backgroundColor:GREEN+'cc',borderRadius:4,stack:'s'},
+    {label:'Mủ dây', data:xes2.map(x=>byXe2[x].day), backgroundColor:AMBER+'cc',borderRadius:4,stack:'s'},
+  ]);
+
+  // Table
+  const tbody = document.getElementById('tbody-phieu');
+  tbody.innerHTML = bm.sort((a,b)=>a.ngay.localeCompare(b.ngay)).map(r=>`
+    <tr>
+      <td>${(()=>{ const p=r.ngay.slice(5).split('-'); return p[1]+'/'+p[0]; })()}</td>
+      <td>Tổ ${r.to}</td>
+      <td>${r.xe}</td>
+      <td>${r.msnv}</td>
+      <td>${r.tenCN}</td>
+      <td>${r.muon}</td>
+      <td class="num">${fmtN(r.muDong)}</td>
+      <td class="num">${fmtN(r.muDay)}</td>
+      <td class="num" style="color:var(--green-mid);font-weight:700">${fmtN(r.tongTuoi)}</td>
+    </tr>`).join('');
+}
+
+// ────────────────────────────────────────────────
+//  PAGE 3
+// ────────────────────────────────────────────────
+function renderPage3() {
+  const toSel = document.getElementById('f3-to')?.value||'';
+  const xhSel = document.getElementById('f3-xh')?.value||'';
+  const luong = filteredLuong(toSel, xhSel);
+
+  // KPIs
+  const totL = luong.reduce((s,r)=>s+r.tongLuong,0);
+  const tbL  = luong.length ? totL/luong.length : 0;
+  const tbHS = luong.length ? luong.reduce((s,r)=>s+r.hieuSuat,0)/luong.length : 0;
+  const nAP  = luong.filter(r=>['A+','A'].includes(r.xepHang)).length;
+  document.getElementById('k3-tong').textContent = fmtK(totL)+' R';
+  document.getElementById('k3-tb').textContent   = fmtK(tbL)+' R';
+  document.getElementById('k3-hs').textContent   = tbHS.toFixed(1)+'%';
+  document.getElementById('k3-aplus').textContent = nAP+' người';
+
+  // Hieu suat by TO
+  const hsByTo={}; const cntTo={};
+  luong.forEach(r=>{ hsByTo[r.to]=(hsByTo[r.to]||0)+r.hieuSuat; cntTo[r.to]=(cntTo[r.to]||0)+1; });
+  const tos3 = Object.keys(hsByTo).sort();
+  mkChart('c3-hs-to','bar',tos3.map(t=>'Tổ '+t),[
+    {label:'Hiệu suất TB (%)',data:tos3.map(t=>+(hsByTo[t]/cntTo[t]).toFixed(1)),
+     backgroundColor:tos3.map(t=>{const v=hsByTo[t]/cntTo[t];return v>=100?GREEN:v>=80?AMBER:RED}),
+     borderRadius:5},
+    {label:'Mục tiêu 100%',data:tos3.map(()=>100),
+     type:'line',borderColor:'rgba(255,80,80,0.6)',borderDash:[4,3],borderWidth:1.5,
+     pointRadius:0,fill:false},
+  ],{extra:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}},
+     scales:{y:{ticks:{callback:v=>v+'%'},grid:{color:'#f0f0f0'}}}});
+
+  // Xep hang distribution
+  const xhDist={}; luong.forEach(r=>{ xhDist[r.xepHang]=(xhDist[r.xepHang]||0)+1; });
+  const xhKeys = ['A+','A','B','C','D'].filter(k=>xhDist[k]);
+  const xhColors = {'A+':'#1a6b3a','A':'#4caf50','B':'#1565c0','C':'#e65100','D':'#c0392b'};
+  mkChart('c3-xh','doughnut',xhKeys,[
+    {data:xhKeys.map(k=>xhDist[k]),backgroundColor:xhKeys.map(k=>xhColors[k]),borderWidth:2}
+  ],{extra:{plugins:{legend:{position:'bottom'}}}});
+
+  // Top 10 by mu tuoi
+  const top10 = [...luong].sort((a,b)=>b.tongMu-a.tongMu).slice(0,10);
+  const khData = top10.map(r => (DATA.hs||{})[r.msnv]?.khMu || 0);
+  mkChart('c3-top10','bar',top10.map(r=>r.ten.split(' ').pop()),[
+    {label:'Thực tế (kg)',data:top10.map(r=>r.tongMu),
+     backgroundColor:top10.map(r=>({'A+':GREEN,'A':'#4caf50','B':BLUE,'C':AMBER,'D':RED})[r.xepHang]||BLUE),
+     borderRadius:5},
+    {label:'KH (kg)',data:khData,backgroundColor:'rgba(200,200,200,0.4)',borderRadius:5},
+  ],{extra:{indexAxis:'y',plugins:{legend:{position:'bottom'}},
+    scales:{x:{grid:{color:'#f0f0f0'},ticks:{font:{size:10}}}}}});
+
+  // Luong by TO (stacked)
+  const lByTo={}; luong.forEach(r=>{
+    if(!lByTo[r.to]) lByTo[r.to]={cc:0,sl:0,kt:0};
+    lByTo[r.to].cc+=r.tienCC; lByTo[r.to].sl+=r.tienSL; lByTo[r.to].kt+=Math.max(0,r.tienKT);
+  });
+  const tos4=Object.keys(lByTo).sort();
+  mkChart('c3-luong-to','doughnut',tos4.map(t=>'Tổ '+t),[
+    {data:tos4.map(t=>lByTo[t].cc+lByTo[t].sl+lByTo[t].kt),
+     backgroundColor:PALETTE.slice(0,tos4.length),borderWidth:2}
+  ],{extra:{plugins:{legend:{position:'bottom'}}}});
+
+  // Table
+  const tbody3 = document.getElementById('tbody-luong');
+  const xhBadge = xh => `<span class="badge b${xh.replace('+','p')}">${xh}</span>`;
+  tbody3.innerHTML = luong.sort((a,b)=>b.tongLuong-a.tongLuong).map(r=>`
+    <tr>
+      <td>${r.msnv}</td>
+      <td style="font-weight:600">${r.ten}</td>
+      <td style="text-align:center">Tổ ${r.to}</td>
+      <td class="num">${r.soCong}</td>
+      <td class="num">${fmtN(r.tongMu)}</td>
+      <td class="num">${fmtK(r.tienCC)}</td>
+      <td class="num">${fmtK(r.tienSL)}</td>
+      <td style="text-align:center">${xhBadge(r.xepHang)}</td>
+      <td class="num" style="color:${r.tienKT<0?'var(--red)':'var(--green)'}">${fmtK(r.tienKT)}</td>
+      <td class="num">${r.hieuSuat}%</td>
+      <td class="num" style="color:var(--green-dark);font-weight:800">${fmtK(r.tongLuong)} R</td>
+    </tr>`).join('');
+}
+
+// ────────────────────────────────────────────────
+//  NAVIGATION
+// ────────────────────────────────────────────────
+async function refreshLive() {
+  const btn = document.getElementById('btn-refresh');
+  const status = document.getElementById('refresh-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang tải...';
+  status.textContent = '';
+  try {
+    await loadFromSheets();
+    // Re-render current active page
+    const activePage = document.querySelector('.page.active')?.id;
+    if (activePage === 'p1') renderPage1();
+    else if (activePage === 'p2') renderPage2();
+    else if (activePage === 'p3') renderPage3();
+    const now = new Date().toLocaleTimeString('vi-VN');
+    status.textContent = `Cập nhật lúc ${now}`;
+    btn.textContent = '✅ Đã làm mới';
+    setTimeout(() => { btn.textContent = '🔄 Làm mới dữ liệu'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    status.textContent = 'Lỗi: ' + e.message;
+    btn.textContent = '🔄 Làm mới dữ liệu';
+    btn.disabled = false;
+  }
+}
+
+function showGidConfig() {
+  const el = document.getElementById('gid-config');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyGidConfig() {
+  const bm  = document.getElementById('gid-bm')?.value?.trim();
+  const lg  = document.getElementById('gid-luong')?.value?.trim();
+  const hs  = document.getElementById('gid-hs')?.value?.trim();
+  if (bm)  SHEET_GIDS.bocMu    = parseInt(bm);
+  if (lg)  SHEET_GIDS.luong    = parseInt(lg);
+  if (hs)  SHEET_GIDS.hieuSuat = parseInt(hs);
+  document.getElementById('gid-config').style.display = 'none';
+  refreshLive();
+}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+function updateDataSourceLabel(txt) {
+  const el = document.getElementById("data-src-lbl");
+  if (el) el.textContent = txt;
+}
+</script>
+</body>
+</html>

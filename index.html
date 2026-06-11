@@ -1113,7 +1113,7 @@ function renderPage3() {
     {label:'Thực tế (kg)',data:top10.map(r=>r.tongMu),
      backgroundColor:top10.map(r=>({'A+':GREEN,'A':'#4caf50','B':BLUE,'C':AMBER,'D':RED})[r.xepHang]||BLUE),
      borderRadius:4,barPercentage:0.6,categoryPercentage:0.85,order:1},
-  ],{extra:{indexAxis:'y',plugins:{legend:{position:'bottom'}},
+  ],{extra:{indexAxis:'y',grouped:false,plugins:{legend:{position:'bottom'}},
     scales:{x:{grid:{color:'#f0f0f0'},ticks:{font:{size:10}}}}}});
 
   // Luong by TO (stacked)

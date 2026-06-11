@@ -866,18 +866,18 @@ function renderPage1() {
             const tot=v.dong+v.day;
             const pct=totDong+totDay>0?((tot/(totDong+totDay))*100).toFixed(0):0;
             return `<tr>
-              <td style="padding:4px 10px 4px 0;color:#ccc;font-size:11px">Tổ \${t}</td>
-              <td style="padding:4px 8px;text-align:right;color:#4caf74;font-weight:600;font-size:11px">\${fn(v.dong)}</td>
-              <td style="padding:4px 8px;text-align:right;color:#e8a020;font-weight:600;font-size:11px">\${fn(v.day)}</td>
-              <td style="padding:4px 0 4px 8px;text-align:right;color:#fff;font-weight:700;font-size:11px">\${fn(tot)}</td>
-              <td style="padding:4px 0 4px 6px;text-align:right;color:#888;font-size:10px">\${pct}%</td>
+              <td style="padding:4px 10px 4px 0;color:#ccc;font-size:11px">Tổ ${t}</td>
+              <td style="padding:4px 8px;text-align:right;color:#4caf74;font-weight:600;font-size:11px">${fn(v.dong)}</td>
+              <td style="padding:4px 8px;text-align:right;color:#e8a020;font-weight:600;font-size:11px">${fn(v.day)}</td>
+              <td style="padding:4px 0 4px 8px;text-align:right;color:#fff;font-weight:700;font-size:11px">${fn(tot)}</td>
+              <td style="padding:4px 0 4px 6px;text-align:right;color:#888;font-size:10px">${pct}%</td>
             </tr>`;
           }).join('');
           tip.innerHTML = `
             <div style="background:#1e2a22;border:1px solid #2d4a35;border-radius:10px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:300px;font-family:'Segoe UI',Arial,sans-serif">
               <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid #2d4a35">
-                📅 Ngày \${dateLabel}
-                <span style="float:right;font-size:11px;font-weight:400;color:#aaa">Tổng: \${fn(totDong+totDay)} kg</span>
+                📅 Ngày ${dateLabel}
+                <span style="float:right;font-size:11px;font-weight:400;color:#aaa">Tổng: ${fn(totDong+totDay)} kg</span>
               </div>
               <table style="width:100%;border-collapse:collapse">
                 <thead>
@@ -889,30 +889,32 @@ function renderPage1() {
                     <th style="font-size:10px;color:#888;font-weight:600;text-align:right;padding-bottom:5px">%</th>
                   </tr>
                 </thead>
-                <tbody>\${rows}</tbody>
+                <tbody>${rows}</tbody>
                 <tfoot>
                   <tr style="border-top:1px solid #2d4a35">
                     <td style="padding:5px 10px 0 0;font-size:11px;color:#aaa;font-weight:600">Tổng cộng</td>
-                    <td style="padding:5px 8px 0;text-align:right;color:#4caf74;font-weight:700;font-size:12px">\${fn(totDong)}</td>
-                    <td style="padding:5px 8px 0;text-align:right;color:#e8a020;font-weight:700;font-size:12px">\${fn(totDay)}</td>
-                    <td style="padding:5px 0 0 8px;text-align:right;color:#fff;font-weight:800;font-size:13px">\${fn(totDong+totDay)}</td>
+                    <td style="padding:5px 8px 0;text-align:right;color:#4caf74;font-weight:700;font-size:12px">${fn(totDong)}</td>
+                    <td style="padding:5px 8px 0;text-align:right;color:#e8a020;font-weight:700;font-size:12px">${fn(totDay)}</td>
+                    <td style="padding:5px 0 0 8px;text-align:right;color:#fff;font-weight:800;font-size:13px">${fn(totDong+totDay)}</td>
                     <td style="padding:5px 0 0 6px;text-align:right;color:#888;font-size:10px">100%</td>
                   </tr>
                 </tfoot>
               </table>
             </div>`;
           const pos = context.chart.canvas.getBoundingClientRect();
-          tip.style.cssText = `
-            position:fixed;opacity:1;pointer-events:none;transition:opacity .1s;z-index:9999;
-            left:\${pos.left + window.scrollX + context.tooltip.caretX + 12}px;
-            top:\${pos.top  + window.scrollY + context.tooltip.caretY - 60}px;
-          `;
-          // Prevent going off right edge
-          const tipW = tip.offsetWidth||310;
+          // position:fixed dùng toạ độ viewport — không cộng scrollX/Y
+          const cx = context.tooltip.caretX;
+          const cy = context.tooltip.caretY;
+          const tipW = 320;
           const winW = window.innerWidth;
-          if(pos.left + context.tooltip.caretX + 12 + tipW > winW){
-            tip.style.left = (pos.left + window.scrollX + context.tooltip.caretX - tipW - 12)+'px';
-          }
+          const left = (pos.left + cx + 16 + tipW > winW)
+            ? pos.left + cx - tipW - 16
+            : pos.left + cx + 16;
+          tip.style.cssText = `
+            position:fixed;opacity:1;pointer-events:none;transition:opacity .15s;z-index:9999;
+            left:${left}px;
+            top:${Math.max(8, pos.top + cy - 60)}px;
+          `;
         }
       }
     }

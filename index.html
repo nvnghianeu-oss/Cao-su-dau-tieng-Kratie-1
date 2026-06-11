@@ -464,7 +464,7 @@ select:focus,input:focus{border-color:var(--green)}
 // ────────────────────────────────────────────────
 // CÁCH 1 (khuyên dùng): Apps Script Web App Proxy
 //   → Xem file DataProxy.gs, deploy rồi dán URL vào đây
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbybbA4g1pCnjXYWgTk_1dlQur0cHlGevpgXTOHR17j_i7Elx8u37kvHb2UibLHzChdt2Q/exec';
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxFx5gUjoRuSptb6ZgJzSpOwDp4dKQ_cmZxnyDYfj39xnWqDlbh8IzWC6QhDfmcYRxOWQ/exec';
 
 // CÁCH 2 (dự phòng): Share sheet "Anyone with link can view"
 //   → Dán Sheet ID (từ URL) vào đây
@@ -473,18 +473,10 @@ const SHEET_ID  = '1gHDnzyWXWatjiI3V0DwC12oquYOQrKq0YNDCWPGFDRw';
 // Published ID (đã có, dùng cho CÁCH 3)
 const PUB_ID = '2PACX-1vQZcJ2E0dfSw6gHcltM1eEw_jqL8DAzHqDS5J_eATVfRowwosjHQhW3awLHE10pDWoIsGmu52bnGyl5';
 
-// Tên các sheet tab trong Google Sheets (phải khớp chính xác với tên tab)
-const SHEET_GIDS = { bocMu: 'PhieuBocMu', luong: 'LuongNV', hieuSuat: 'HieuSuat' };
-
 // Tự động chọn mode
-const USE_PROXY = (PROXY_URL !== 'YOUR_WEBAPP_URL_HERE') &&
+const USE_PROXY = (PROXY_URL !== 'YOUR_WEBAPP_URL_HERE') && 
                     (window.location.protocol !== 'file:');  // file:// blocks fetch
 const USE_EMBED = !USE_PROXY; // offline fallback với data nhúng sẵn
-
-// Biến toàn cục — khai báo rõ ràng để tránh lỗi ReferenceError
-let DATA = { bm: [], luong: [], hs: {} };
-let charts = {};
-let filterFrom = '', filterTo = '', filterToSel = '', filterXe = '';
 // ────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────
@@ -588,19 +580,12 @@ window.onload = async () => {
   }
 };
 
-async function fetchSheetTry(...names) {
-  for (const name of names) {
-    try { const r = await fetchSheet(name); if (r && r.length) return r; } catch(e) {}
-  }
-  return [];
-}
-
 async function loadFromSheets() {
-  // Fetch PhieuBocMu + Luong NV in parallel — thử nhiều tên tab khác nhau
+  // Fetch PhieuBocMu + Luong NV in parallel
   const [bocMuRows, luongRows, hsRows] = await Promise.all([
-    fetchSheetTry('PhieuBocMu','PHIEU BOC MU','BocMu','Sheet1'),
-    fetchSheetTry('LuongNV','LUONG NV','BangLuong','Sheet2'),
-    fetchSheetTry('HieuSuat','HIEU SUAT','Sheet3'),
+    fetchSheet(SHEET_GIDS.bocMu),
+    fetchSheet(SHEET_GIDS.luong).catch(()=>fetchSheet(8)),
+    fetchSheet(SHEET_GIDS.hieuSuat).catch(()=>fetchSheet(10)),
   ]);
 
   // Parse BocMu — date format DD/MM/YYYY
@@ -1175,7 +1160,7 @@ function showPage(id, el) {
   el.classList.add('active');
 }
 function updateDataSourceLabel(txt) {
-  const el = document.getElementById('data-source-lbl');
+  const el = document.getElementById("data-src-lbl");
   if (el) el.textContent = txt;
 }
 </script>

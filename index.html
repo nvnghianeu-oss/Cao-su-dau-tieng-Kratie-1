@@ -473,8 +473,8 @@ const SHEET_ID  = '1gHDnzyWXWatjiI3V0DwC12oquYOQrKq0YNDCWPGFDRw';
 // Published ID (đã có, dùng cho CÁCH 3)
 const PUB_ID = '2PACX-1vQZcJ2E0dfSw6gHcltM1eEw_jqL8DAzHqDS5J_eATVfRowwosjHQhW3awLHE10pDWoIsGmu52bnGyl5';
 
-// Tên các sheet tab trong Google Sheets (phải khớp chính xác với tên tab)
-const SHEET_GIDS = { bocMu: 'PhieuBocMu', luong: 'LuongNV', hieuSuat: 'HieuSuat' };
+// Tên các sheet tab trong Google Sheets (khớp chính xác với tên tab)
+const SHEET_GIDS = { bocMu: 'PhieuBocMu', luong: 'Lương nhân viên', hieuSuat: 'Hiệu suất' };
 
 // Tự động chọn mode
 const USE_PROXY = (PROXY_URL !== 'YOUR_WEBAPP_URL_HERE') &&
@@ -598,9 +598,9 @@ async function fetchSheetTry(...names) {
 async function loadFromSheets() {
   // Fetch PhieuBocMu + Luong NV in parallel — thử nhiều tên tab khác nhau
   const [bocMuRows, luongRows, hsRows] = await Promise.all([
-    fetchSheetTry('PhieuBocMu','PHIEU BOC MU','BocMu','Sheet1'),
-    fetchSheetTry('LuongNV','LUONG NV','BangLuong','Sheet2'),
-    fetchSheetTry('HieuSuat','HIEU SUAT','Sheet3'),
+    fetchSheetTry('PhieuBocMu'),
+    fetchSheetTry('Lương nhân viên'),
+    fetchSheetTry('Hiệu suất'),
   ]);
 
   // Parse BocMu — date format DD/MM/YYYY
@@ -620,34 +620,39 @@ async function loadFromSheets() {
     };
   });
 
-  // Parse Luong NV — multi-row header, data starts at row where col0 is numeric
-  const luong = luongRows.filter(r => {
-    const id = r['Mã NV']||r[Object.keys(r)[0]]||'';
-    return /^\d{3}$/.test(String(id).trim());
-  }).map(r => {
-    const keys = Object.keys(r);
-    return {
-      msnv: String(r[keys[0]]||'').trim(),
-      ten:  String(r[keys[1]]||'').trim(),
-      to:   String(r[keys[3]]||'').trim(),
-      soCong:   parseVN(r[keys[4]]),
-      ngayCN:   parseVN(r[keys[5]]),
-      tienCC:   parseVN(r[keys[6]]),
-      tongMu:   parseVN(r[keys[7]]),
-      tienSL:   parseVN(r[keys[8]]),
-      xepHang:  String(r[keys[9]]||'B').trim(),
-      tienKT:   parseVN(r[keys[10]]),
-      hieuSuat: parseVNPct(r[keys[11]]),
-      tongLuong:parseVN(r[keys[12]]),
-    };
-  });
+  // Parse Luong NV — header row 1 có merged cells với nhiều cột tên '' bị collapse.
+  // Dùng tên cột thật thay vì index. Cột '' cuối cùng = Tiền kĩ thuật (col10).
+  const luong = luongRows.filter(r => /^\d{3}$/.test(String(r['Mã NV']||'').trim()))
+    .map(r => {
+      const soCong   = parseVN(r['CHUYÊN CẦN']);     // col4 = Tổng số công
+      const tongMu   = parseVN(r['SẢN LƯỢNG']);      // col7 = Tổng mủ tươi
+      const tienKT   = parseVN(r['']);               // col10 = Tiền kĩ thuật (last '' override)
+      const tienCC   = Math.round(soCong * 20000);
+      const tienSL   = Math.round(tongMu * 300);
+      return {
+        msnv:      String(r['Mã NV']||'').trim(),
+        ten:       String(r['Họ tên công nhân']||'').trim(),
+        to:        String(r['Tổ']||'').trim(),
+        soCong, ngayCN: 0, tienCC, tongMu, tienSL,
+        xepHang:   String(r['KĨ THUẬT']||'B').trim(), // col9 = Xếp hạng
+        tienKT,
+        hieuSuat:  parseVNPct(r['Hiệu suất']),        // col11
+        tongLuong: parseVN(r['TỔNG LƯƠNG']),          // col12
+      };
+    });
 
-  // Parse Hiệu suất for KH vs actual
+  // Parse Hiệu suất — dùng tên cột (có thể có khoảng trắng đầu tên)
   const hs = {};
-  hsRows.filter(r => /^\d{3}$/.test(String(r[Object.keys(r)[0]]||'').trim())).forEach(r => {
-    const keys = Object.keys(r);
-    const msnv = String(r[keys[0]]).trim();
-    hs[msnv] = { khMu: parseVN(r[keys[4]]), thucTe: parseVN(r[keys[5]]), hieuSuat: parseVNPct(r[keys[6]]) };
+  hsRows.filter(r => /^\d{3}$/.test(String(r['Mã NV']||'').trim())).forEach(r => {
+    const msnv = String(r['Mã NV']).trim();
+    const khKey  = Object.keys(r).find(k => k.includes('hoạch') || k.includes('Kế hoạch')) || '';
+    const ttKey  = Object.keys(r).find(k => k.includes('thực tế') || k.includes('thực tế')) || '';
+    const hsKey  = Object.keys(r).find(k => k.trim() === 'Hiệu suất') || 'Hiệu suất';
+    hs[msnv] = {
+      khMu:     parseVN(khKey  ? r[khKey]  : 0),
+      thucTe:   parseVN(ttKey  ? r[ttKey]  : 0),
+      hieuSuat: parseVNPct(r[hsKey]||0),
+    };
   });
 
   DATA = { bm, luong, hs };

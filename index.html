@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Ban Lãnh Đạo – Cao Su Siêm Riệp</title>
+<title>Dashboard – Cao Su Siêm Riệp</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 /* ── TOKENS ── */
@@ -303,9 +303,7 @@ select:focus,input:focus{border-color:var(--green)}
         <div class="chart-header">
           <div>
             <div class="chart-title">Heatmap sản lượng: Ngày × Tổ</div>
-            <div class="chart-sub">Mủ tươi (kg) — đậm = nhiều</div>
           </div>
-          <span class="chart-tag">Nhiệt đồ</span>
         </div>
         <div class="heatmap-wrap">
           <table class="heatmap" id="heatmap-table"></table>
@@ -343,7 +341,6 @@ select:focus,input:focus{border-color:var(--green)}
     <div class="chart-card">
       <div class="chart-header">
         <div class="chart-title">Chi tiết phiếu bóc mủ</div>
-        <div class="chart-sub">Tất cả phiếu trong kỳ — click header để sắp xếp</div>
       </div>
       <div class="table-wrap" style="max-height:340px">
         <table class="data-table sticky-hdr" id="table-phieu">
@@ -385,22 +382,18 @@ select:focus,input:focus{border-color:var(--green)}
       <div class="kpi-card amber">
         <div class="kpi-lbl">Tổng quỹ lương</div>
         <div class="kpi-val" id="k3-tong">—</div>
-        <div class="kpi-sub">Riel (tháng 06/2026)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-lbl">Lương TB / người</div>
         <div class="kpi-val" id="k3-tb">—</div>
-        <div class="kpi-sub">Riel</div>
       </div>
       <div class="kpi-card blue">
         <div class="kpi-lbl">Hiệu suất TB</div>
         <div class="kpi-val" id="k3-hs">—</div>
-        <div class="kpi-sub">so với kế hoạch</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-lbl">Đạt A / A+</div>
         <div class="kpi-val" id="k3-aplus">—</div>
-        <div class="kpi-sub">công nhân xếp hạng cao</div>
       </div>
     </div>
 
@@ -782,8 +775,8 @@ function initFilters() {
 
   const fi = document.getElementById('f-from');
   const ft = document.getElementById('f-to');
-  if (fi) { fi.value = minD; fi.min = minD; fi.max = maxD; }
-  if (ft) { ft.value = maxD; ft.min = minD; ft.max = maxD; }
+  if (fi) { fi.value = minD; }
+  if (ft) { ft.value = maxD; }
 
   ['f-to-sel','f2-to','f3-to'].forEach(id => {
     const el = document.getElementById(id);
@@ -801,6 +794,9 @@ function applyFilter() {
   filterFrom  = document.getElementById('f-from')?.value||'';
   filterTo    = document.getElementById('f-to')?.value||'';
   filterToSel = document.getElementById('f-to-sel')?.value||'';
+  const fmt = d => d ? d.split('-').reverse().join('/') : '—';
+  const lbl = document.getElementById('p1-period');
+  if (lbl) lbl.textContent = `Kỳ báo cáo: ${fmt(filterFrom)} → ${fmt(filterTo)}`;
   renderPage1();
 }
 
